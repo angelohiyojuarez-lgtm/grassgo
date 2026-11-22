@@ -1,0 +1,88 @@
+@if (notifications.visible()) {
+  <div class="notification-center">
+    <button
+      type="button"
+      class="notification-trigger"
+      (click)="toggle()"
+      [attr.aria-expanded]="open()"
+      aria-label="Abrir notificaciones"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        aria-hidden="true"
+      >
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4M12 2V1" />
+      </svg>
+      <span>Avisos</span>
+      @if (notifications.unread()) {
+        <strong class="notification-count">{{ notifications.unread() }}</strong>
+      }
+    </button>
+    @if (open()) {
+      <section class="notification-panel" aria-label="Notificaciones de GrassGo">
+        <header>
+          <h2>Tus avisos</h2>
+          <button type="button" (click)="open.set(false)" aria-label="Cerrar notificaciones">
+            Cerrar
+          </button>
+        </header>
+        <div class="notification-audio">
+          @if (notifications.soundEnabled()) {
+            <p>Sonido activado</p>
+            <div class="notification-actions">
+              <button type="button" (click)="notifications.mute()">Silenciar</button
+              ><button type="button" (click)="notifications.testSound()">Probar sonido</button>
+            </div>
+          } @else {
+            <p>Activa el sonido para escuchar los nuevos avisos mientras usas GrassGo.</p>
+            <button
+              type="button"
+              class="notification-primary"
+              (click)="notifications.enableSound()"
+            >
+              Activar sonido
+            </button>
+          }
+          @if (notifications.soundError()) {
+            <p role="status">{{ notifications.soundError() }}</p>
+          }
+        </div>
+        @if (notifications.error()) {
+          <p class="notification-error" role="status">{{ notifications.error() }}</p>
+        }
+        <div class="notification-list" aria-live="polite" aria-relevant="additions">
+          @for (item of notifications.items(); track item.id) {
+            <a
+              [routerLink]="notificationLink(item.href)"
+              (click)="open.set(false)"
+              class="notification-item"
+              [class.notification-unread]="item.unread"
+            >
+              <strong>{{ item.title }}</strong
+              ><span>{{ item.detail }}</span
+              ><small>{{ notifications.dateLabel(item.at) }}</small>
+            </a>
+          } @empty {
+            <p class="notification-empty">
+              Todavía no tienes avisos en este apartado. Los nuevos cambios aparecerán aquí.
+            </p>
+          }
+        </div>
+        <footer>
+          <button type="button" (click)="notifications.markAllRead()">
+            Marcar todos como leídos
+          </button>
+          @if (notifications.portal() === 'cliente') {
+            <a routerLink="/invitaciones" (click)="open.set(false)">Invitaciones a negocios</a>
+          }
+          <small
+            >Los sonidos funcionan con GrassGo abierto y el audio permitido por tu navegador.</small
+          >
+        </footer>
+      </section>
+    }
+  </div>
+}

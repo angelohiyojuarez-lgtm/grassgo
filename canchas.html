@@ -1,0 +1,231 @@
+<!DOCTYPE html><html lang="es" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
+<meta content="mobile_tab" name="shell-type">
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Syne:wght@700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            display: ['"Syne"', 'sans-serif']
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              200: '#a7f3d0',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857'
+            }
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    @layer base {
+      html, body {
+        width: 100vw;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        overscroll-behavior: none;
+      }
+      .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom, 12px);
+      }
+      .pt-safe {
+        padding-top: env(safe-area-inset-top, 0px);
+      }
+    }
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-white font-sans text-slate-800 flex flex-col min-h-screen selection:bg-brand-500 selection:text-white antialiased">
+<!-- Top App Header -->
+<header class="fixed top-0 w-full z-50 pt-safe bg-white border-b border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+<div class="h-16 px-5 flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-500 flex items-center justify-center font-display text-lg font-extrabold text-white shadow-sm shadow-brand-500/20">
+          G
+        </div>
+<span class="font-display text-xl font-extrabold tracking-tight text-slate-900">
+          GRASS<span class="text-brand-600">GO</span>
+</span>
+</div>
+<div class="flex items-center gap-2">
+<button aria-label="Notificaciones" class="w-10 h-10 rounded-full bg-slate-50 border border-slate-100 hover:bg-slate-100 text-slate-700 flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[21px]">notifications</span>
+</button>
+<button aria-label="Perfil de usuario" class="w-10 h-10 rounded-full bg-slate-50 border border-slate-100 text-slate-700 flex items-center justify-center font-semibold text-sm hover:border-slate-200 transition-colors">
+<span class="material-symbols-outlined text-[20px]">person</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Scrollable Content -->
+<main class="flex-1 flex flex-col relative w-full pt-[4.25rem] pb-24 bg-white px-5">
+<div class="py-6 flex flex-col gap-6">
+<!-- Greeting / Hero text -->
+<div class="flex flex-col gap-1.5">
+
+<h1 class="font-display text-2xl font-extrabold text-slate-900 tracking-tight mt-1">
+        Tu pichanga asegurada en minutos ⚽
+      </h1>
+<p class="text-sm text-slate-500 font-medium">
+        Reserva tu cancha sintética favorita al instante sin llamadas ni esperas.
+      </p>
+</div>
+<!-- Massive Prominent VER SEDES CTA Button -->
+<a class="w-full h-20 rounded-2xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600 text-white font-display text-2xl font-extrabold tracking-wide flex items-center justify-between px-8 shadow-lg shadow-brand-500/30 active:scale-95 transition-all" data-path="sedes" href="sedes.html">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+<span class="material-symbols-outlined text-[26px]">stadium</span>
+</div>
+<span class="">VER SEDES</span>
+</div>
+<div class="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+<span class="material-symbols-outlined text-[24px]">arrow_forward</span>
+</div>
+</a>
+<!-- Quick Essential Shortcut Buttons -->
+<div>
+<div class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5 px-0.5">Acceso rápido</div>
+<div class="grid grid-cols-3 gap-2.5">
+<!-- Button 1 -->
+<a class="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-center gap-1.5 transition-all shadow-xs active:scale-95" data-path="mis-reservas" href="#">
+<div class="w-10 h-10 rounded-xl bg-emerald-50 text-brand-600 flex items-center justify-center">
+<span class="material-symbols-outlined text-[22px]">calendar_month</span>
+</div>
+<span class="text-xs font-bold text-slate-800 leading-tight">Mis Reservas</span>
+<span class="text-[10px] text-slate-400 font-medium">Turnos activos</span>
+</a>
+<!-- Button 2 -->
+<a class="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-center gap-1.5 transition-all shadow-xs active:scale-95" data-path="cercanas" href="#">
+<div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
+<span class="material-symbols-outlined text-[22px]">near_me</span>
+</div>
+<span class="text-xs font-bold text-slate-800 leading-tight">Cercanas</span>
+<span class="text-[10px] text-slate-400 font-medium">Por distrito</span>
+</a>
+<!-- Button 3 -->
+<a class="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-center gap-1.5 transition-all shadow-xs active:scale-95" data-path="ayuda" href="#">
+<div class="w-10 h-10 rounded-xl bg-emerald-50 text-brand-600 flex items-center justify-center">
+<span class="material-symbols-outlined text-[22px]">chat</span>
+</div>
+<span class="text-xs font-bold text-slate-800 leading-tight">WhatsApp</span>
+<span class="text-[10px] text-slate-400 font-medium">Ayuda 24/7</span>
+</a>
+</div>
+</div>
+<!-- Key Essential Information Card -->
+<div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-col gap-3.5">
+<div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+<span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[17px] text-brand-600">verified</span>
+          Garantía GrassGo
+        </span>
+<span class="text-[11px] font-semibold text-brand-700 bg-brand-50 px-2 py-0.5 rounded-full border border-brand-200">
+          Yape • Plin
+        </span>
+</div>
+<div class="flex flex-col gap-2.5">
+<div class="flex items-start gap-2.5">
+<div class="w-6 h-6 rounded-full bg-emerald-50 text-brand-600 flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[14px]">payments</span>
+</div>
+<div>
+<p class="text-xs font-bold text-slate-800 leading-tight">Adelanto de solo S/ 10</p>
+<p class="text-[11px] text-slate-500 font-normal leading-tight mt-0.5">Paga el saldo restante en cancha vía efectivo o billetera digital.</p>
+</div>
+</div>
+<div class="flex items-start gap-2.5">
+<div class="w-6 h-6 rounded-full bg-emerald-50 text-brand-600 flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+</div>
+<div>
+<p class="text-xs font-bold text-slate-800 leading-tight">Confirmación en menos de 1 min</p>
+<p class="text-[11px] text-slate-500 font-normal leading-tight mt-0.5">Turnos sincronizados en tiempo real directamente con el local.</p>
+</div>
+</div>
+<div class="flex items-start gap-2.5">
+<div class="w-6 h-6 rounded-full bg-emerald-50 text-brand-600 flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[14px]">grass</span>
+</div>
+<div>
+<p class="text-xs font-bold text-slate-800 leading-tight">Canchas verificadas con luz&nbsp;</p>
+<p class="text-[11px] text-slate-500 font-normal leading-tight mt-0.5">Césped sintético de alta densidad</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar (Light Mode) -->
+<nav class="fixed bottom-0 w-full z-50 pb-safe bg-white border-t border-slate-200 shadow-[0_-2px_10px_rgba(0,0,0,0.03)]">
+<div class="flex justify-around items-center h-16 px-2">
+<a aria-current="page" class="flex-1 flex flex-col items-center justify-center min-h-[44px] py-1 text-brand-600 transition-colors" data-path="inicio" href="canchas.html">
+<span class="material-symbols-outlined text-[24px]">sports_soccer</span>
+<span class="text-[11px] font-bold mt-0.5">Inicio</span>
+</a>
+<a class="flex-1 flex flex-col items-center justify-center min-h-[44px] py-1 text-slate-500 hover:text-slate-800 transition-colors" data-path="sedes" href="sedes.html">
+<span class="material-symbols-outlined text-[24px]">stadium</span>
+<span class="text-[11px] font-medium mt-0.5">Sedes</span>
+</a>
+<a class="flex-1 flex flex-col items-center justify-center min-h-[44px] py-1 text-slate-500 hover:text-slate-800 transition-colors" data-path="mis-reservas" href="#">
+<span class="material-symbols-outlined text-[24px]">calendar_month</span>
+<span class="text-[11px] font-medium mt-0.5">Mis Reservas</span>
+</a>
+<a class="flex-1 flex flex-col items-center justify-center min-h-[44px] py-1 text-slate-500 hover:text-slate-800 transition-colors" data-path="perfil" href="perfil.html">
+<span class="material-symbols-outlined text-[24px]">person</span>
+<span class="text-[11px] font-medium mt-0.5">Perfil</span>
+</a>
+</div>
+</nav>
+
+<!-- Minimal functionality wiring -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-grassgo.js"></script>
+<script src="grassgo-alerts.js"></script>
+<script>
+  document.querySelector('button[aria-label="Perfil de usuario"]')?.addEventListener('click', function () {
+    window.location.href = 'perfil.html';
+  });
+  document.getElementById('logoutBtn')?.addEventListener('click', async function () {
+    try { if (window.Grassgo && typeof Grassgo.logoutUser === 'function') await Grassgo.logoutUser(); } catch (e) {}
+    sessionStorage.clear();
+    localStorage.removeItem('grassgo_active_user');
+    window.location.href = 'index.html';
+  });
+  document.querySelector('a[data-path="mis-reservas"]')?.addEventListener('click', function (e) {
+    e.preventDefault();
+    const active = window.Grassgo ? Grassgo.getActiveUser() : null;
+    const reservas = window.Grassgo ? Grassgo.getUserReservations(active ? (active.email || active.uid) : null) : [];
+    if (reservas && reservas.length > 0) {
+      const last = reservas[reservas.length - 1];
+      GrassgoAlert.booking(`Tienes ${reservas.length} reserva(s) activa(s):\n• Cancha: ${last.cancha || 'Sede El Puma'}\n• Horario: ${last.horario || '8:00 PM'}`, 'Mis Reservas');
+    } else {
+      GrassgoAlert.info('Aún no tienes partidos reservados.\nPulsa "VER SEDES" para elegir tu cancha.', 'Sin Reservas');
+    }
+  });
+  document.querySelector('button[aria-label="Notificaciones"]')?.addEventListener('click', function () {
+    GrassgoAlert.info('¡Todo al día!\nNo tienes notificaciones pendientes.', 'Notificaciones');
+  });
+</script>
+
+</body></html>

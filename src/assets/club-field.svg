@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="960" viewBox="0 0 1440 960" fill="none">
+  <!-- Franjas rectas de identidad deportiva. -->
+  <path d="M1180 0h260v350L1090 0Z" fill="#BDFF00" opacity=".12"/>
+  <path d="M0 690 220 960H0Z" fill="#00FF94" opacity=".05"/>
+  <path d="m1370 0 70 88v72L1310 0Z" fill="#00FF94" opacity=".13"/>
+  <g stroke="#00FF94" stroke-width="1" opacity=".24">
+    <path d="M1160 0 1440 354M1120 0l320 405M0 640l260 320M0 590l300 370"/>
+    <path d="M70 80h120M70 80v120M1370 880h-120M1370 880V760" stroke-width="2"/>
+    <path d="M1040 70h80v80M320 890h-80v-80M1200 570h160v120h80"/>
+    <path d="M92 300h18m-9-9v18M1330 460h18m-9-9v18M440 850h18m-9-9v18" stroke-width="2"/>
+  </g>
+  <g stroke="#00FF94" stroke-width="5" opacity=".22">
+    <path d="m1278 230 24 30m-9-48 24 30m-9-48 24 30m-9-48 24 30"/>
+    <path d="m106 786 24 30m-9-48 24 30m-9-48 24 30"/>
+  </g>
+</svg>

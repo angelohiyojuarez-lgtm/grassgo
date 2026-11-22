@@ -1,0 +1,82 @@
+<a class="skip-link" [href]="skipTarget()">Saltar al contenido</a>
+@if (!accessPage() && !platformPage()) {
+  <header class="site-header">
+    <div class="header-inner">
+      <a
+        class="brand"
+        [routerLink]="staffPage() ? staffHome() : '/inicio'"
+        aria-label="GrassGo, inicio"
+        ><img
+          class="brand-image"
+          src="/assets/brand/grassgo-logo.png"
+          alt=""
+          width="64"
+          height="64"
+        />grass<span class="brand-go">go<span class="brand-dot">.</span></span></a
+      >
+      @if (!staffPage()) {
+        <nav class="desktop-nav" aria-label="Navegación principal">
+          <a
+            routerLink="/inicio"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            >Inicio</a
+          >
+          <a routerLink="/sedes" routerLinkActive="active">Explorar canchas</a>
+          <a routerLink="/reservas" routerLinkActive="active">Mis reservas</a>
+        </nav>
+      }
+      <div class="header-actions">
+        <gg-notification-center />
+        <gg-theme-toggle />
+        @if (!staffPage()) {
+          <a
+            class="header-account"
+            [routerLink]="auth.user() ? '/perfil' : '/ingresar'"
+            [attr.aria-label]="auth.user() ? 'Mi cuenta' : 'Ingresar'"
+            ><gg-icon name="user" /><span>{{ auth.user() ? 'Mi cuenta' : 'Ingresar' }}</span></a
+          >
+        } @else {
+          <span class="header-account">Administración del local</span>
+        }
+      </div>
+    </div>
+  </header>
+}
+@if (accessPage() || platformPage()) {
+  <gg-theme-toggle class="theme-corner" />
+}
+<main id="contenido" tabindex="-1"><router-outlet /></main>
+@if (!accessPage() && !platformPage()) {
+  <footer class="site-footer">
+    <a class="brand brand-small" [routerLink]="staffPage() ? staffHome() : '/inicio'"
+      ><img
+        class="brand-image"
+        src="/assets/brand/grassgo-logo.png"
+        alt=""
+        width="64"
+        height="64"
+      />grass<span class="brand-go">go.</span></a
+    ><span>Más cancha. Más equipo. Más fútbol.</span><span>Hecho para tu próxima pichanga.</span>
+  </footer>
+  @if (!staffPage()) {
+    <nav class="mobile-nav" aria-label="Navegación móvil">
+      <a
+        routerLink="/inicio"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        ariaCurrentWhenActive="page"
+        ><gg-icon name="home" /><span>Inicio</span></a
+      >
+      <a routerLink="/sedes" routerLinkActive="active" ariaCurrentWhenActive="page"
+        ><gg-icon name="field" /><span>Canchas</span></a
+      >
+      <a routerLink="/reservas" routerLinkActive="active" ariaCurrentWhenActive="page"
+        ><gg-icon name="calendar" /><span>Reservas</span></a
+      >
+      <a routerLink="/perfil" routerLinkActive="active" ariaCurrentWhenActive="page"
+        ><gg-icon name="user" /><span>Mi cuenta</span></a
+      >
+    </nav>
+  }
+}

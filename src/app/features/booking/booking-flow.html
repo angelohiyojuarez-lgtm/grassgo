@@ -1,0 +1,373 @@
+<div class="page booking-page">
+  @if (metadataLoading()) {
+    <div class="panel loading-state" role="status">Consultando cancha…</div>
+  } @else if (!valid) {
+    <div class="panel compact-empty">
+      <h1>No encontramos esa cancha publicada</h1>
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
+      <a routerLink="/sedes" class="button button-primary">Ver canchas</a>
+    </div>
+  } @else {
+    <a class="back-link" [routerLink]="['/sedes', venue.id, 'canchas']"
+      ><gg-icon name="back" /> {{ venue.name }}</a
+    >
+    <div class="booking-context">
+      @if (venue.image) {
+        <img [ggMedia]="venue.image" [alt]="court?.name || 'Cancha'" />
+      }
+      <div>
+        <span class="eyebrow">{{ venue.name }}</span
+        ><strong>{{ court?.name }}</strong
+        ><span>{{ court?.sport }} · {{ venue.location }}</span>
+      </div>
+      <span class="tag">1 hora</span>
+    </div>
+    <ol class="booking-progress" aria-label="Pasos de reserva">
+      <li [class.current]="step() === 1" [class.done]="step() > 1"><span>01</span> Fecha</li>
+      <li [class.current]="step() === 2" [class.done]="step() > 2"><span>02</span> Hora</li>
+      <li [class.current]="step() === 3" [class.done]="step() > 3"><span>03</span> Resumen</li>
+      <li [class.current]="step() === 4"><span>04</span> Adelanto</li>
+    </ol>
+    @if (error()) {
+      <div class="notice notice-error" role="alert">{{ error() }}</div>
+    }
+    @if (scheduleStale() && step() < 4) {
+      <div class="notice notice-error" role="alert">
+        No pudimos actualizar la agenda.
+        <button class="text-button" (click)="refreshSchedule()">Reintentar</button>
+      </div>
+    }
+    @if (step() === 1) {
+      <div class="page-heading centered">
+        <span class="eyebrow">PRIMERO, EL DÍA</span>
+        <h1>¿Cuándo jugamos<span class="cyan-text">?</span></h1>
+        <p>Elige la fecha de tu próximo partido.</p>
+      </div>
+      <section class="calendar-panel panel" aria-label="Calendario para elegir fecha">
+        <div class="calendar-month">
+          <button
+            class="icon-button"
+            aria-label="Mes anterior"
+            [disabled]="month() === today.slice(0, 7)"
+            (click)="monthChange(-1)"
+          >
+            <gg-icon name="back" />
+          </button>
+          <h2>{{ monthLabel() }}</h2>
+          <button
+            class="icon-button"
+            aria-label="Mes siguiente"
+            [disabled]="month() === lastDate.slice(0, 7)"
+            (click)="monthChange(1)"
+          >
+            <gg-icon name="arrow" />
+          </button>
+        </div>
+        <div class="calendar-week" aria-hidden="true">
+          <span>LUN</span><span>MAR</span><span>MIÉ</span><span>JUE</span><span>VIE</span
+          ><span>SÁB</span><span>DOM</span>
+        </div>
+        <div class="calendar-grid">
+          @for (cell of cells(); track cell.date) {
+            <button
+              type="button"
+              [class.other-month]="!cell.inMonth"
+              [class.today]="cell.date === today"
+              [class.selected]="cell.date === date()"
+              [disabled]="cell.date < today || cell.date > lastDate || isWeeklyClosed(cell.date)"
+              [attr.aria-label]="
+                longDate(cell.date) + (isWeeklyClosed(cell.date) ? ' · Cerrado' : '')
+              "
+              [attr.aria-pressed]="cell.date === date()"
+              (click)="chooseDate(cell.date)"
+            >
+              {{ cell.day }}
+            </button>
+          }
+        </div>
+        <div class="selected-date">
+          <gg-icon name="calendar" />
+          <div>
+            <span>FECHA ELEGIDA</span><strong>{{ longDate(date()) }}</strong>
+          </div>
+          <gg-icon name="check" />
+        </div>
+        <button
+          class="button button-primary button-full"
+          [disabled]="busy() || isWeeklyClosed(date())"
+          (click)="confirmDate()"
+        >
+          {{ busy() ? 'Consultando horarios…' : 'Confirmar fecha' }}<gg-icon name="arrow" />
+        </button>
+        @if (isWeeklyClosed(date())) {
+          <p class="notice" role="status">El local no atiende este día. Elige otra fecha.</p>
+        }
+      </section>
+    } @else if (step() === 2) {
+      <div class="page-heading centered">
+        <span class="eyebrow">AHORA, TU HORARIO</span>
+        <h1>Encuentra tu hora<span class="cyan-text">.</span></h1>
+        <p class="chosen-date-line">
+          <gg-icon name="calendar" /> {{ longDate(date()) }}
+          <button class="text-button" (click)="step.set(1)">Cambiar</button>
+        </p>
+      </div>
+      <div class="slot-legend">
+        <span><i class="legend-free"></i> Disponible</span
+        ><span><i class="legend-selected"></i> Elegido</span
+        ><span><i class="legend-busy"></i> No disponible</span>
+      </div>
+      @if (!preview()) {
+        <p class="muted">La agenda se actualiza automáticamente cada 10 segundos.</p>
+        @if (availability()?.maintenance) {
+          <div class="notice">Cancha en mantenimiento. Las nuevas reservas están pausadas.</div>
+        }
+        @if (availability()?.awaitingFinish) {
+          <div class="notice">
+            El partido actual superó su hora estimada. Esperamos la confirmación del administrador
+            para ofrecer nuevos horarios.
+          </div>
+        }
+        @if (availability()?.activeUntil; as until) {
+          <div class="notice">
+            Partido en juego · liberación estimada a las <strong>{{ clock(until) }}</strong
+            >.
+          </div>
+        }
+        @if (availability()?.schedule?.length) {
+          <details class="panel ops-public-schedule">
+            <summary>Ver el horario actualizado de los partidos</summary>
+            @for (item of availability()?.schedule; track item.scheduledHour) {
+              <p>
+                <strong>{{ item.running ? 'En juego' : 'Reservado' }}</strong> ·
+                {{ slotLabel(item.scheduledHour) }} → estimado {{ clock(item.estimatedStartAt) }} –
+                {{ clock(item.estimatedEndAt) }}
+              </p>
+            }
+          </details>
+        }
+      }
+      @if (availability() && !slots().length) {
+        <div class="panel compact-empty">
+          <h2>
+            {{
+              availability()?.closedDate
+                ? 'Cerrado para nuevas reservas en esta fecha'
+                : 'El local no atiende en esta fecha'
+            }}
+          </h2>
+          <button class="text-button" (click)="step.set(1)">Elegir otra fecha</button>
+        </div>
+      }
+      <section class="time-groups">
+        @for (group of groups; track group.title) {
+          @if (groupSlots(group.from, group.to).length) {
+            <div class="time-group">
+              <div class="time-group-title">
+                <h2>{{ group.title }}</h2>
+                <span>{{ group.subtitle }}</span>
+              </div>
+              <div class="time-grid">
+                @for (slot of groupSlots(group.from, group.to); track slot.hour) {
+                  <button
+                    [class.selected]="hour() === slot.hour"
+                    [disabled]="scheduleStale() || !slot.available || isPast(slot.hour)"
+                    [attr.aria-pressed]="hour() === slot.hour"
+                    (click)="selectHour(slot.hour)"
+                  >
+                    <strong>{{ slotLabel(slot.hour) }}</strong
+                    ><span>{{
+                      !slot.available || isPast(slot.hour)
+                        ? 'No disponible'
+                        : money(slot.priceCents)
+                    }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        }
+      </section>
+      <div class="booking-bottom">
+        <span
+          ><gg-icon name="clock" />
+          {{ hour() === null ? 'Selecciona un bloque de una hora' : slotLabel(hour()!) }}</span
+        ><button
+          class="button button-primary"
+          [disabled]="hour() === null || scheduleStale() || preview()"
+          (click)="confirmHour()"
+        >
+          Confirmar horario <gg-icon name="arrow" />
+        </button>
+      </div>
+    } @else if (step() === 3) {
+      <div class="page-heading centered">
+        <span class="eyebrow">CASI EN LA CANCHA</span>
+        <h1>Revisa tu reserva<span class="cyan-text">.</span></h1>
+        <p>Todo claro antes de continuar.</p>
+      </div>
+      <div class="confirmation-grid summary-only">
+        <section class="panel booking-summary">
+          <h2>Tu próximo partido</h2>
+          <div class="summary-venue">
+            <span class="quick-icon"><gg-icon name="field" /></span>
+            <div>
+              <strong>{{ venue.name }}</strong
+              ><span>{{ court?.name }} · {{ court?.sport }}</span>
+            </div>
+          </div>
+          <dl class="summary-list">
+            <div>
+              <dt>Fecha</dt>
+              <dd>{{ longDate(date()) }}</dd>
+            </div>
+            <div>
+              <dt>Horario</dt>
+              <dd>{{ slotLabel(hour()!) }}</dd>
+            </div>
+            <div>
+              <dt>Duración</dt>
+              <dd>1 hora</dd>
+            </div>
+            <div>
+              <dt>Total de la cancha</dt>
+              <dd>{{ money(total()) }}</dd>
+            </div>
+          </dl>
+          <div class="advance-box">
+            <div>
+              <span>ADELANTO PARA RESERVAR</span>
+              <p>El saldo se paga en el local.</p>
+            </div>
+            <strong>{{ money(venue.advanceCents) }}</strong>
+          </div>
+          <div class="balance-line">
+            <span>Saldo pendiente</span><strong>{{ money(total() - venue.advanceCents) }}</strong>
+          </div>
+          <button
+            class="button button-primary button-full advance-continue"
+            [disabled]="preview() || scheduleStale() || busy()"
+            (click)="create()"
+          >
+            {{ busy() ? 'Validando horario…' : 'Continuar con el comprobante'
+            }}<gg-icon name="arrow" />
+          </button>
+          <p class="advance-next-note">
+            Verás las instrucciones del local para pagar por tu cuenta y adjuntar la foto. La
+            reserva requiere revisión del administrador.
+          </p>
+          <button class="text-button" (click)="step.set(2)">Cambiar fecha u horario</button>
+        </section>
+      </div>
+    } @else {
+      <div class="page-heading centered">
+        <span class="success-bubble"><gg-icon [name]="proofSent() ? 'check' : 'shield'" /></span>
+        <h1>{{ canUpload() ? 'Adjunta tu comprobante.' : reservationStatus() + '.' }}</h1>
+        <p>
+          {{
+            canUpload()
+              ? 'Tu horario está retenido temporalmente. Paga por el medio indicado por el local y adjunta la foto para solicitar su revisión.'
+              : reservation()?.status === 'pending_verification' && !expired()
+                ? 'El administrador debe verificar que recibió el dinero para confirmar tu reserva.'
+                : 'Consulta aquí el estado actualizado de tu solicitud.'
+          }}
+        </p>
+      </div>
+      <section class="panel receipt-panel">
+        <span class="tag">{{ reservationStatus() }}</span>
+        <h2>{{ venue.name }}</h2>
+        <p>{{ longDate(date()) }} · {{ slotLabel(hour()!) }}</p>
+        @if (reservation()?.demo) {
+          <div class="notice">Solicitud de prueba en entorno local. No realices pagos.</div>
+        }
+        @if (
+          expirationLabel() &&
+          ['pending_payment', 'pending_verification'].includes(reservation()?.status || '') &&
+          !expired()
+        ) {
+          <p class="muted">Plazo de la solicitud: {{ expirationLabel() }} (hora de Perú).</p>
+        }
+        @if (expired()) {
+          <div class="notice" role="status">
+            El plazo de esta solicitud terminó. Si ya realizaste el pago, comunícate con el
+            establecimiento para que lo revise.
+          </div>
+        }
+        @if (canUpload()) {
+          <div class="payment-title">
+            <span class="quick-icon"><gg-icon name="shield" /></span>
+            <div>
+              <span class="eyebrow">ADELANTO DE {{ money(reservation()!.advanceCents) }}</span>
+              <h2>{{ paymentMethods() }}</h2>
+            </div>
+          </div>
+          @if (qr()) {
+            <div class="qr-holder">
+              <img
+                [ggMedia]="qr()"
+                [alt]="
+                  paymentMode() === 'live'
+                    ? 'Código de pago del establecimiento'
+                    : 'QR de demostración, no pagar'
+                "
+              /><span class="demo-stamp">{{
+                paymentMode() === 'live'
+                  ? 'Adelanto de ' + money(reservation()!.advanceCents) + ' · ' + paymentMethods()
+                  : 'DEMOSTRACIÓN · NO PAGAR'
+              }}</span>
+            </div>
+          }
+          @if (paymentRecipient()) {
+            <p>
+              <strong>Titular:</strong> {{ paymentRecipient() }}<br /><strong>Número:</strong>
+              {{ paymentPhone() }}
+            </p>
+          }
+          <p class="muted">
+            Adjunta el comprobante dentro del plazo de la solicitud. El local debe verificar el pago
+            para confirmar tu reserva.
+          </p>
+          <label class="upload-zone" for="actual-proof"
+            ><gg-icon name="upload" /><strong>{{
+              file() ? 'Cambiar comprobante' : 'Sube tu comprobante de pago'
+            }}</strong
+            ><span>JPG, PNG o WebP · Máximo 5 MB</span
+            ><input
+              id="actual-proof"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              (change)="chooseFile($event)"
+          /></label>
+          @if (fileUrl()) {
+            <img class="proof-preview" [src]="fileUrl()" alt="Vista previa del comprobante" />
+            <p class="muted">{{ file()?.name }}</p>
+          }
+          @if (fileError()) {
+            <p class="field-error" role="alert">{{ fileError() }}</p>
+          }
+          <button
+            class="button button-primary button-full"
+            [disabled]="!file() || busy() || expired()"
+            (click)="sendProof()"
+          >
+            {{ busy() ? 'Enviando comprobante…' : 'Enviar comprobante a revisión'
+            }}<gg-icon name="arrow" />
+          </button>
+        }
+        <button class="text-button button-full" [disabled]="busy()" (click)="refreshReservation()">
+          Consultar estado
+        </button>
+        @if (proofSent()) {
+          @if (reservation(); as item) {
+            <gg-reservation-share [reservation]="item" />
+          }
+        }
+        <a class="text-button button-full" routerLink="/reservas"
+          >Ver mis reservas <gg-icon name="arrow"
+        /></a>
+      </section>
+    }
+  }
+</div>

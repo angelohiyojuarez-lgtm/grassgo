@@ -1,0 +1,192 @@
+.platform-content .button,
+.platform-content .text-button {
+  min-height: 50px;
+  font-size: 16px;
+  padding: 12px 18px;
+}
+.platform-heading-actions {
+  margin-top: 0;
+}
+.platform-operations {
+  margin: 24px 0;
+}
+.platform-operation-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.platform-operation-row {
+  padding: 16px 0;
+  border-top: 1px solid var(--line, #d8ebdf);
+}
+.platform-operation-row p {
+  margin: 8px 0 14px;
+}
+.platform-sidebar nav a {
+  min-height: 50px;
+  font-size: 15px;
+  white-space: normal;
+}
+.platform-sidebar nav { display: grid; overflow: visible; gap: 8px; }
+.platform-content h2 {
+  font-size: 23px;
+}
+.platform-content p,
+.platform-content td,
+.platform-content label,
+.platform-content input,
+.platform-content select {
+  font-size: 16px;
+}
+.platform-content input,
+.platform-content select {
+  min-height: 50px;
+}
+.platform-content .platform-welcome h2 {
+  font-size: clamp(30px, 4vw, 48px);
+}
+.platform-metrics span {
+  font-size: 15px;
+}
+.platform-metrics small,
+.platform-content .list-count,
+.platform-sync {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.platform-content .venue-preview strong {
+  font-size: 17px;
+}
+.platform-content .venue-preview small {
+  font-size: 14px;
+}
+.platform-content .platform-status {
+  font-size: 13px;
+}
+.platform-booking-state {
+  display: block;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.platform-attention-item {
+  border-top: 1px solid var(--line, #d8ebdf);
+  padding: 18px 0;
+}
+.platform-attention-item > strong {
+  font-size: 18px;
+}
+.platform-content .platform-attention-item p {
+  font-size: 15px;
+  line-height: 1.6;
+}
+.platform-attention-item:last-child {
+  padding-bottom: 0;
+}
+.platform-readiness {
+  margin-top: 22px;
+}
+.platform-checklist {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.platform-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  line-height: 1.5;
+}
+.platform-readiness .notice {
+  padding: 18px;
+  margin: 20px 0;
+}
+.platform-readiness .notice ul {
+  padding-left: 20px;
+  line-height: 1.8;
+  margin-bottom: 0;
+}
+.platform-court-summary {
+  border-top: 1px solid var(--line, #d8ebdf);
+  padding-top: 16px;
+}
+.platform-content th {
+  font-size: 13px;
+}
+.platform-content .audit-list strong {
+  font-size: 17px;
+}
+.platform-content .audit-list p {
+  font-size: 15px;
+}
+.platform-content .audit-list small {
+  font-size: 13px;
+}
+.platform-content .settings-card li {
+  font-size: 16px;
+  line-height: 1.7;
+}
+@media (max-width: 700px) {
+  .platform-sidebar nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .platform-operation-metrics {
+    grid-template-columns: 1fr;
+  }
+  .platform-heading-actions,
+  .detail-actions {
+    width: 100%;
+  }
+  .platform-heading-actions .button,
+  .detail-actions .button {
+    width: 100%;
+  }
+  .platform-content .venue-preview {
+    flex-wrap: wrap;
+  }
+  .platform-content .venue-preview > div {
+    flex-basis: 65%;
+  }
+  .platform-content .venue-preview .button {
+    margin-left: auto;
+  }
+  .platform-content .business-filters {
+    flex-direction: column;
+  }
+  .platform-content .business-status-filter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .platform-content .business-table-wrap {
+    overflow: visible;
+  }
+  .platform-content table {
+    min-width: 0;
+  }
+  .platform-content thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .platform-content tbody {
+    display: grid;
+    gap: 14px;
+  }
+  .platform-content tr {
+    display: grid;
+    padding: 16px;
+    border: 1px solid var(--line, #d8ebdf);
+    border-radius: 16px;
+  }
+  .platform-content td {
+    display: block;
+    max-width: none;
+    border: 0;
+    padding: 8px 0;
+  }
+  .platform-content td strong {
+    font-size: 20px;
+  }
+  .platform-content td .button {
+    width: 100%;
+    margin-top: 8px;
+  }
+}

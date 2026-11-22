@@ -1,0 +1,165 @@
+:host {
+  display: block;
+}
+.onboarding {
+  max-width: 900px;
+  padding: clamp(22px, 4vw, 40px);
+}
+h2 {
+  font-size: clamp(24px, 3vw, 34px);
+  margin: 24px 0 12px;
+}
+.intro {
+  line-height: 1.7;
+  max-width: 720px;
+  color: var(--text-secondary, #64748b);
+}
+.step-progress {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.step-progress span {
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: var(--surface-soft, #edf2f7);
+  font-weight: 700;
+}
+.step-progress .current {
+  background: #d7f5f1;
+  color: #12534b;
+}
+.business-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 28px;
+}
+label {
+  display: grid;
+  gap: 10px;
+  font-weight: 700;
+  color: var(--ink, #173c28);
+  font-size: 17px;
+  align-content: start;
+}
+input,
+select {
+  width: 100%;
+  min-height: 58px;
+  border: 1px solid var(--border, #cbd5e1);
+  background: var(--surface, #fff);
+  color: inherit;
+  border-radius: 13px;
+  padding: 14px;
+  font: inherit;
+  font-weight: 500;
+}
+small {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text-secondary, #64748b);
+}
+.form-actions {
+  grid-column: 1/-1;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.form-actions .button {
+  min-height: 58px;
+  padding: 16px 22px;
+  font-size: 17px;
+}
+.preparation-note {
+  padding: 20px;
+  border-radius: 14px;
+  background: var(--surface-soft, #edf2f7);
+  display: grid;
+  gap: 10px;
+  line-height: 1.6;
+}
+.notice {
+  margin: 22px 0;
+}
+.courts-form {
+  display: grid;
+  gap: 24px;
+  margin-top: 24px;
+}
+.court-count {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.court-card {
+  min-width: 0;
+  margin: 0;
+  padding: 24px;
+  border: 1px solid var(--line, #d8ebdf);
+  border-radius: 18px;
+}
+.court-card legend {
+  padding: 0 10px;
+  font-size: 21px;
+  font-weight: 750;
+}
+.court-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.court-card-heading p {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.remove-court {
+  min-height: 50px;
+  padding: 10px 16px;
+  border: 1px solid var(--line, #d8ebdf);
+  border-radius: 12px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.courts-form .add-court {
+  min-height: 58px;
+  font-size: 18px;
+}
+:is(input, select, button, a):focus-visible {
+  outline: 3px solid #029fbd;
+  outline-offset: 3px;
+}
+@media (max-width: 650px) {
+  .court-card {
+    padding: 18px 14px;
+  }
+  .court-card-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .business-fields {
+    grid-template-columns: 1fr;
+  }
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+  .form-actions .button {
+    width: 100%;
+    justify-content: center;
+  }
+  .step-progress span {
+    flex: 1;
+    font-size: 14px;
+    text-align: center;
+    padding: 12px 8px;
+  }
+}

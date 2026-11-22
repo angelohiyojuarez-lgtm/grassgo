@@ -1,0 +1,250 @@
+<section class="income panel" aria-labelledby="income-title">
+  <header>
+    <span class="eyebrow">{{
+      context() === 'platform' ? 'SUPERADMIN · INGRESOS DEL NEGOCIO' : 'EL DINERO DE TU LOCAL'
+    }}</span>
+    <h2 id="income-title">Ingresos de canchas y productos</h2>
+    <p>
+      Consulta el dinero recibido y la ganancia bruta de los productos. Los cobros se cuentan en su
+      fecha real, con horario de Lima.
+    </p>
+  </header>
+  <nav class="periods" aria-label="Periodo del resumen">
+    <button
+      class="button"
+      [class.button-primary]="period() === 'day'"
+      [class.button-outline]="period() !== 'day'"
+      [attr.aria-pressed]="period() === 'day'"
+      [disabled]="busy()"
+      (click)="setPeriod('day')"
+    >
+      Día
+    </button>
+    <button
+      class="button"
+      [class.button-primary]="period() === 'week'"
+      [class.button-outline]="period() !== 'week'"
+      [attr.aria-pressed]="period() === 'week'"
+      [disabled]="busy()"
+      (click)="setPeriod('week')"
+    >
+      Semana
+    </button>
+    <button
+      class="button"
+      [class.button-primary]="period() === 'month'"
+      [class.button-outline]="period() !== 'month'"
+      [attr.aria-pressed]="period() === 'month'"
+      [disabled]="busy()"
+      (click)="setPeriod('month')"
+    >
+      Mes
+    </button>
+  </nav>
+  <div class="date-controls">
+    <button class="button button-outline" [disabled]="busy()" (click)="move(-1)">← Anterior</button>
+    <label
+      >Elige una fecha<input
+        type="date"
+        [ngModel]="date()"
+        (ngModelChange)="setDate($event)"
+        [disabled]="busy()"
+    /></label>
+    <button class="button button-outline" [disabled]="busy()" (click)="move(1)">Siguiente →</button>
+  </div>
+  <div class="income-actions">
+    <button class="button button-outline" [disabled]="busy() || loading()" (click)="load()">
+      {{ loading() ? 'Actualizando…' : 'Actualizar ingresos' }}
+    </button>
+    <p>Se actualiza cada 30 segundos mientras esta pantalla está abierta.</p>
+  </div>
+  @if (error()) {
+    <p class="notice notice-error" role="alert">{{ error() }}</p>
+  }
+  @if (message()) {
+    <p class="notice notice-success" role="status">{{ message() }}</p>
+  }
+  @if (loading()) {
+    <p role="status">Consultando todos los cobros y ventas del periodo…</p>
+  }
+  @if (report(); as result) {
+    <p class="range-label">
+      {{ longDate(result.range.startDate) }} — {{ longDate(periodEnd(result.range.endDate)) }}
+    </p>
+    <div class="income-grid">
+      <article class="metric">
+        <span>Ingresos de canchas</span><strong>{{ money(result.summary.courtsCents) }}</strong>
+        <p>
+          Adelantos verificados: {{ money(result.summary.courtAdvancesCents) }}<br />Saldos
+          recibidos: {{ money(result.summary.courtBalancesCents) }}
+        </p>
+      </article>
+      <article class="metric">
+        <span>Ventas de productos</span><strong>{{ money(result.summary.productsCents) }}</strong>
+        <p>{{ result.summary.saleCount }} venta(s) · {{ result.summary.unitsSold }} unidad(es)</p>
+      </article>
+      <article class="metric combined">
+        <span>Total cobrado del local</span><strong>{{ money(result.summary.totalCents) }}</strong>
+        <p>Canchas + ventas de productos</p>
+      </article>
+    </div>
+    <article class="profit-box">
+      <h3>Ganancia bruta de productos</h3>
+      @if (!result.summary.saleCount || result.summary.costedSales) {
+        <strong>{{ money(result.summary.knownProfitCents) }}</strong>
+      } @else {
+        <strong>Falta el costo de compra</strong>
+      }
+      <p>
+        Ventas de productos menos el costo de las unidades vendidas. No descuenta los gastos
+        generales del negocio.
+      </p>
+      @if (result.summary.uncostedSales) {
+        <p class="notice">
+          Resultado parcial: {{ result.summary.uncostedSales }} venta(s) no tenían costo registrado.
+          Editar el costo hoy no cambia las ventas anteriores.
+        </p>
+      }
+    </article>
+    <section class="income-section" aria-label="Productos vendidos en el periodo">
+      <h3>Productos vendidos</h3>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Unidades</th>
+              <th>Vendido</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (product of result.topProducts; track product.productId) {
+              <tr>
+                <td>{{ product.name }}</td>
+                <td>{{ product.quantity }}</td>
+                <td>{{ money(product.totalCents) }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="3">Todavía no hay ventas de productos en este periodo.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section class="income-section" aria-label="Saldos de canchas por cobrar">
+      <h3>Saldos de canchas por cobrar</h3>
+      <p>
+        Reservas de las fechas elegidas con adelanto verificado. Registra el saldo únicamente cuando
+        lo recibas.
+      </p>
+      @for (item of result.outstanding.slice(0, visibleBalances()); track item.reservationId) {
+        <article class="balance-card">
+          <div>
+            <strong>{{ item.courtName }} · {{ hour(item.hour) }}</strong>
+            <p>
+              {{ longDate(item.date) }}<br />Pendiente:
+              <strong>{{ money(item.totalCents - item.advanceCents) }}</strong>
+            </p>
+          </div>
+          <button class="button button-primary" [disabled]="busy()" (click)="openBalance(item)">
+            Registrar saldo recibido
+          </button>
+        </article>
+      } @empty {
+        <p>No hay saldos pendientes en las reservas de estas fechas.</p>
+      }
+      @if (result.outstanding.length > visibleBalances()) {
+        <button class="button button-outline" (click)="visibleBalances.set(visibleBalances() + 20)">
+          Ver más saldos
+        </button>
+      }
+      @if (pending(); as value) {
+        <form class="balance-form" (ngSubmit)="saveBalance()" aria-label="Confirmar saldo recibido">
+          <h3>{{ value.courtName }} · {{ money(value.totalCents - value.advanceCents) }}</h3>
+          <label
+            >¿Cómo te pagaron?<select
+              name="balanceMethod"
+              [(ngModel)]="method"
+              [disabled]="busy()"
+              required
+            >
+              <option value="" disabled>Elige el método</option>
+              <option value="cash">Efectivo</option>
+              <option value="yape">Yape</option>
+              <option value="plin">Plin</option>
+            </select></label
+          >
+          <label class="check"
+            ><input
+              type="checkbox"
+              name="received"
+              [(ngModel)]="received"
+              [disabled]="busy()"
+            />Confirmo que ya recibí el saldo completo de
+            {{ money(value.totalCents - value.advanceCents) }}.</label
+          >
+          <div class="balance-actions">
+            <button
+              type="button"
+              class="button button-outline"
+              [disabled]="busy()"
+              (click)="cancelBalance()"
+            >
+              Volver sin registrar</button
+            ><button
+              type="submit"
+              class="button button-primary"
+              [disabled]="busy() || !received || !method"
+            >
+              {{ busy() ? 'Registrando…' : 'Guardar saldo recibido' }}
+            </button>
+          </div>
+        </form>
+      }
+    </section>
+    <section class="income-section" aria-label="Detalle de ventas del periodo">
+      <h3>Detalle de ventas</h3>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Cantidad</th>
+              <th>Total</th>
+              <th>Fecha y pago</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (sale of result.sales.slice(0, visibleSales()); track sale.id) {
+              <tr>
+                <td>{{ sale.name }}</td>
+                <td>{{ sale.quantity }}</td>
+                <td>{{ money(sale.totalCents) }}</td>
+                <td>
+                  {{ longDate(todayOf(sale.at)) }} · {{ clock(sale.at) }}<br />{{
+                    labelMethod(sale.paymentMethod)
+                  }}
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="4">Las ventas registradas aparecerán aquí.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (result.sales.length > visibleSales()) {
+        <button class="button button-outline" (click)="visibleSales.set(visibleSales() + 20)">
+          Ver más ventas
+        </button>
+      }
+    </section>
+    <p class="income-help">
+      El total cobrado muestra ingresos; la ganancia de las canchas requiere registrar también los
+      gastos del local. Ningún adelanto se suma dos veces.
+    </p>
+  }
+</section>

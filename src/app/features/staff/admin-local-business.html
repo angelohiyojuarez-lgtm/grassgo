@@ -1,0 +1,248 @@
+<div class="local-business">
+  <div class="business-heading">
+    <span class="eyebrow">MI LOCAL</span>
+    <h2>Datos y pagos de tu negocio</h2>
+    <p>Mantén al día la información de {{ name() || 'tu establecimiento' }}.</p>
+  </div>
+  @if (loading()) {
+    <div class="panel business-loading" role="status">
+      Estamos consultando los datos de tu local…
+    </div>
+  } @else if (loadError()) {
+    <div class="notice notice-error" role="alert">
+      <p>{{ loadError() }}</p>
+      <button class="button button-outline" (click)="load()">Volver a consultar</button>
+    </div>
+  } @else {
+    @if (pendingReload(); as section) {
+      <div class="reload-confirm notice" role="group" aria-labelledby="business-reload-title">
+        <h3 id="business-reload-title">¿Consultar los datos guardados?</h3>
+        <p>
+          Se descartarán los cambios sin guardar de
+          {{ section === 'contact' ? 'Datos del negocio' : 'Cómo recibir el adelanto' }}. El otro
+          apartado conservará sus cambios.
+        </p>
+        <div class="button-row">
+          <button
+            class="button button-outline"
+            [disabled]="isSaving()"
+            (click)="pendingReload.set(null)"
+          >
+            Seguir editando
+          </button>
+          <button class="button button-primary" [disabled]="isSaving()" (click)="confirmReload()">
+            Sí, consultar datos guardados
+          </button>
+        </div>
+      </div>
+    }
+    <section class="panel business-section" aria-labelledby="contact-title">
+      <div class="section-title">
+        <span class="section-icon"><gg-icon name="building" /></span>
+        <div>
+          <h3 id="contact-title">Datos del negocio</h3>
+          <p>Esta información aparecerá en la ficha que ven tus clientes.</p>
+        </div>
+      </div>
+      @if (contactError()) {
+        <p class="notice notice-error" role="alert">{{ contactError() }}</p>
+      }
+      @if (contactMessage()) {
+        <p class="notice notice-success" role="status">{{ contactMessage() }}</p>
+      }
+      <form (ngSubmit)="saveContact()">
+        <fieldset [disabled]="isSaving()">
+          <label
+            >Celular de contacto del negocio<input
+              type="tel"
+              name="business-phone"
+              [(ngModel)]="contact.phone"
+              maxlength="20"
+              autocomplete="tel"
+              placeholder="Tu número de contacto"
+          /></label>
+          <p class="help">Los clientes podrán usarlo para comunicarse con tu local.</p>
+          <label
+            >Referencia para llegar <span class="optional">(opcional)</span
+            ><input
+              type="text"
+              name="business-reference"
+              [(ngModel)]="contact.reference"
+              maxlength="300"
+              placeholder="Ej.: frente a la plaza"
+          /></label>
+          <label
+            >Cuéntales sobre tu negocio <span class="optional">(opcional)</span
+            ><textarea
+              name="business-description"
+              [(ngModel)]="contact.description"
+              maxlength="1000"
+              rows="4"
+              placeholder="Describe tu local y lo que ofrece."
+            ></textarea>
+          </label>
+          <p class="help">
+            Hasta 1000 caracteres. Escribe información que quieras compartir con tus clientes.
+          </p>
+          <button type="submit" class="button button-primary save-button">
+            {{ busy() ? 'Guardando…' : 'Guardar datos del negocio' }}<gg-icon name="check" />
+          </button>
+        </fieldset>
+      </form>
+      <button
+        type="button"
+        class="button button-outline reload-button"
+        [disabled]="isSaving()"
+        (click)="requestReload('contact')"
+      >
+        Consultar datos guardados<gg-icon name="activity" />
+      </button>
+    </section>
+    <section class="panel business-section" aria-labelledby="payment-title">
+      <div class="section-title">
+        <span class="section-icon"><gg-icon name="shield" /></span>
+        <div>
+          <h3 id="payment-title">Cómo recibir el adelanto</h3>
+          <p>Sube tu QR y señala a quién debe pagar el cliente.</p>
+        </div>
+      </div>
+      <div class="notice payment-policy">
+        <gg-icon name="shield" />
+        <p>
+          El cliente envía una foto de su comprobante. Tú revisas que el dinero haya ingresado antes
+          de confirmar la reserva.
+        </p>
+      </div>
+      @if (paymentError()) {
+        <p class="notice notice-error" role="alert">{{ paymentError() }}</p>
+      }
+      @if (paymentMessage()) {
+        <p class="notice notice-success" role="status">{{ paymentMessage() }}</p>
+      }
+      <form (ngSubmit)="savePayment()">
+        <fieldset [disabled]="isSaving()">
+          <legend>1. Foto de tu QR</legend>
+          <p class="help" id="qr-file-help">
+            Elige una foto JPG, PNG o WebP de hasta 5 MB. El QR debe verse completo y nítido.
+          </p>
+          <input
+            #qrFile
+            type="file"
+            name="payment-qr"
+            accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+            hidden
+            (change)="onQrSelected($event)"
+          />
+          <button
+            type="button"
+            class="button button-outline upload-button"
+            aria-describedby="qr-file-help"
+            (click)="qrFile.click()"
+          >
+            <gg-icon name="upload" />{{
+              stagedQr() || payment.qr ? 'Cambiar foto de mi QR' : 'Subir foto de mi QR'
+            }}
+          </button>
+          @if (processing()) {
+            <p class="help" role="status">Preparando tu foto. Espera un momento…</p>
+          }
+          @if (stagedQr(); as image) {
+            <figure class="qr-preview">
+              <img [src]="image.imageData" alt="Vista previa de tu nuevo QR de pago" />
+              <figcaption>Foto elegida · todavía no está guardada</figcaption>
+            </figure>
+            <button type="button" class="button button-outline" (click)="removeStagedQr()">
+              {{ payment.qr ? 'Usar QR guardado' : 'Quitar foto elegida' }}
+            </button>
+          } @else if (payment.qr) {
+            <figure class="qr-preview">
+              <img [ggMedia]="payment.qr" alt="QR de pago guardado del negocio" />
+              <figcaption>QR guardado actualmente</figcaption>
+            </figure>
+          } @else {
+            <div class="qr-empty">
+              <gg-icon name="upload" />
+              <p>Aquí verás tu foto antes de guardarla.</p>
+            </div>
+          }
+          @if (legacyQr() && !stagedQr()) {
+            <p class="help">
+              Para actualizar estos datos, vuelve a subir la foto de tu QR en este apartado.
+            </p>
+          }
+          <div class="payment-details">
+            <fieldset class="method-group">
+              <legend>2. ¿Cómo recibes el adelanto?</legend>
+              <div class="method-buttons">
+                @for (method of methods; track method) {
+                  <button
+                    type="button"
+                    class="method-button"
+                    [class.selected]="payment.methods.includes(method)"
+                    [attr.aria-pressed]="payment.methods.includes(method)"
+                    (click)="toggleMethod(method)"
+                  >
+                    <strong>{{ method }}</strong
+                    ><span>{{
+                      payment.methods.includes(method) ? 'Seleccionado' : 'Seleccionar'
+                    }}</span>
+                  </button>
+                }
+              </div>
+              <p class="help">Marca los métodos que corresponden al QR que subiste.</p>
+            </fieldset>
+            <label
+              >Nombre del titular que aparece al pagar<input
+                type="text"
+                name="payment-recipient"
+                [(ngModel)]="payment.recipient"
+                (ngModelChange)="paymentChanged()"
+                maxlength="100"
+                placeholder="Escribe el nombre que verá el cliente"
+            /></label>
+            <label
+              >Celular para recibir el adelanto<input
+                type="tel"
+                name="payment-phone"
+                [(ngModel)]="payment.phone"
+                (ngModelChange)="paymentChanged()"
+                maxlength="20"
+                placeholder="El número asociado al pago"
+            /></label>
+            <p class="help">
+              Este número y el titular se mostrarán al cliente para enviar su adelanto. Puede ser
+              diferente al celular de contacto.
+            </p>
+          </div>
+          <label class="review-check"
+            ><input
+              type="checkbox"
+              name="payment-reviewed"
+              [ngModel]="paymentReviewed"
+              (ngModelChange)="reviewPayment($event)"
+            /><span>Revisé que el QR y el titular corresponden a mi negocio</span></label
+          >
+          <p class="help">
+            Comprueba también el celular y los métodos seleccionados antes de guardar.
+          </p>
+          <button type="submit" class="button button-primary save-button">
+            {{ busy() ? 'Guardando…' : 'Guardar QR y datos de pago' }}<gg-icon name="check" />
+          </button>
+        </fieldset>
+      </form>
+      <p class="help setup-help">
+        Guardar estos datos no activa las reservas automáticamente. El local también necesita sus
+        canchas y horarios completos. Las solicitudes anteriores conservan los datos de pago con los
+        que se crearon.
+      </p>
+      <button
+        type="button"
+        class="button button-outline reload-button"
+        [disabled]="isSaving()"
+        (click)="requestReload('payment')"
+      >
+        Consultar datos de pago guardados<gg-icon name="activity" />
+      </button>
+    </section>
+  }
+</div>

@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: grassgo-api
+    runtime: node
+    plan: free
+    rootDir: functions
+    buildCommand: npm ci
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://grassgo.web.app,https://grassgo.firebaseapp.com

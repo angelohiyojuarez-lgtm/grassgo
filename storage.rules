@@ -1,0 +1,44 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Comprobantes privados: un archivo inmutable por solicitud.
+    function authenticated() { return request.auth != null; }
+    function platformAdmin() {
+      return authenticated()
+        && firestore.get(/databases/(default)/documents/platform_roles/$(request.auth.uid)).data.role == 'superadmin'
+        && firestore.get(/databases/(default)/documents/platform_roles/$(request.auth.uid)).data.status == 'active';
+    }
+    match /business-media/{establishmentId}/{imageId} {
+      allow read: if authenticated() &&
+        (platformAdmin() || activeMember(establishmentId) ||
+          firestore.get(/databases/(default)/documents/establishments/$(establishmentId)).data.status == 'published');
+      allow create: if resource == null && platformAdmin()
+        && imageId.matches('^[a-zA-Z0-9-]{1,80}$')
+        && firestore.get(/databases/(default)/documents/establishments/$(establishmentId)).data.status in ['draft', 'pending', 'approved', 'suspended']
+        && request.resource.size > 0 && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp'];
+      allow update, delete: if false;
+    }
+    function reservation(reservationId) {
+      return firestore.get(/databases/(default)/documents/reservations/$(reservationId)).data;
+    }
+    function activeMember(establishmentId) {
+      return authenticated()
+        && firestore.get(/databases/(default)/documents/establishments/$(establishmentId)).data.status in ['approved', 'published']
+        && firestore.get(/databases/(default)/documents/establishments/$(establishmentId)/members/$(request.auth.uid)).data.role == 'admin'
+        && firestore.get(/databases/(default)/documents/establishments/$(establishmentId)/members/$(request.auth.uid)).data.status == 'active';
+    }
+    match /proofs/{uid}/{reservationId}/receipt {
+      allow read: if authenticated() && reservation(reservationId).clientUid == uid
+        && (request.auth.uid == uid || activeMember(reservation(reservationId).establishmentId));
+      allow create: if resource == null && authenticated() && request.auth.uid == uid
+        && reservation(reservationId).clientUid == request.auth.uid
+        && reservation(reservationId).status == 'pending_payment'
+        && reservation(reservationId).expiresAt > request.time
+        && request.resource.size > 0 && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp'];
+      allow update, delete: if false;
+    }
+    match /{allPaths=**} { allow read, write: if false; }
+  }
+}

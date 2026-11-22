@@ -1,0 +1,654 @@
+/* Apariencia compartida: el tema claro se aplica sin alterar fotos ni comprobantes. */
+/* El acceso principal conserva su posición dentro del anuncio deportivo. */
+.play-banner .home-booking-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 78px;
+  padding: 22px 28px;
+  margin-top: 24px;
+  background: #bdff00;
+  color: #102017;
+  border: 2px solid #bdff00;
+  font-size: 23px;
+  font-weight: 800;
+  border-radius: 18px;
+  box-shadow: 0 8px 28px #bdff0020;
+}
+.play-banner .home-booking-button:hover {
+  background: #ceff43;
+  border-color: #ceff43;
+}
+.play-banner .home-booking-button gg-icon {
+  width: 28px;
+  height: 28px;
+}
+@media (max-width: 700px) {
+  .play-banner .home-booking-button {
+    min-height: 72px;
+    padding: 20px;
+    font-size: 19px;
+    border-radius: 16px;
+  }
+}
+.profile-page .profile-layout {
+  display: block;
+  max-width: 760px;
+  margin-inline: auto;
+}
+.profile-page .profile-sidebar {
+  display: block;
+  text-align: left;
+}
+.profile-page .profile-sidebar .avatar {
+  margin-bottom: 16px;
+}
+.profile-page .profile-sidebar > h2 {
+  margin-bottom: 8px;
+}
+.profile-page .profile-sidebar .email-text {
+  margin-bottom: 12px;
+}
+.profile-identity {
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr);
+  gap: 6px 16px;
+  align-items: center;
+}
+.profile-page .profile-identity .avatar {
+  grid-column: 1;
+  grid-row: 1/4;
+  width: 60px;
+  height: 60px;
+  margin: 0;
+  font-size: 34px;
+  border-width: 3px;
+}
+.profile-page .profile-identity h2 {
+  grid-column: 2;
+  margin: 0;
+  font-size: 21px;
+}
+.profile-page .profile-identity .email-text {
+  grid-column: 2;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.profile-page .profile-identity .pill {
+  grid-column: 2;
+  margin: 0;
+  justify-self: start;
+  color: var(--muted);
+}
+.profile-option > summary {
+  cursor: pointer;
+  list-style: none;
+  min-height: 52px;
+}
+.profile-option > summary::-webkit-details-marker {
+  display: none;
+}
+.profile-option[open] > summary > gg-icon:last-child {
+  transform: rotate(90deg);
+}
+.profile-option-content {
+  padding: 16px 0 24px;
+  text-align: left;
+}
+.profile-option-content .section-heading {
+  margin-top: 8px;
+}
+.profile-page .profile-main:empty {
+  display: none;
+}
+.profile-page .profile-main {
+  margin-top: 20px;
+}
+/* Los temas solo sustituyen colores: la geometría vive en club.css. */
+html[data-theme='light']
+  :is(
+    .reservation-facts,
+    .ops-customer-timing,
+    .share-options,
+    .reservation-rating,
+    .rating-stars button
+  ) {
+  background: #f3f7f4;
+  color: var(--ink);
+  border-color: var(--line);
+}
+html[data-theme='light'] .demo-label {
+  color: var(--muted);
+}
+html[data-theme='light']
+  :is(.muted, .optional, .email-text, .profile-sidebar .sidebar-link, .profile-sidebar p) {
+  color: #52645a;
+}
+html[data-theme='light'] .time-grid button:disabled strong {
+  color: #61776a;
+}
+html[data-theme='light'] :is(.ops-stats span, .ops-topbar p, .ops-nav button) {
+  color: #52645a;
+}
+html[data-theme='light'] .ops-stats .panel:first-child span {
+  color: #101713;
+}
+html[data-theme='light']
+  gg-platform-dashboard
+  :is(
+    .venue-preview p,
+    .venue-preview small,
+    .venue-preview .text-button,
+    .venue-preview span:not(.platform-status)
+  ) {
+  color: #52645a;
+}
+html[data-theme='light']
+  gg-platform-dashboard
+  :is(.venue-initial, .business-filters, .business-search) {
+  background: #eff4f0;
+  color: #294c37;
+}
+html[data-theme='light']
+  gg-business-editor
+  :is(.establishment-photo-section, .business-photo-empty) {
+  background: #f4f7f5;
+  color: #52645a;
+  border-color: #adc2b4;
+}
+html[data-theme='light'] gg-business-editor :is(.editor-section > p, .editor-note) {
+  color: #52645a;
+}
+html[data-theme='light']
+  :is(
+    .glass-badge,
+    .form-intro,
+    .access-card label,
+    .auth-switch,
+    .access-security,
+    .access-security gg-icon
+  ) {
+  color: #52645a;
+}
+html[data-theme='light'] .time-grid button > span {
+  color: #52645a;
+}
+@media (max-width: 700px) {
+  html[data-theme='light'] :is(.access-story h1, .access-kicker) {
+    color: #101713;
+  }
+}
+.desktop-nav a {
+  white-space: nowrap;
+}
+@media (min-width: 701px) and (max-width: 1000px) {
+  .header-inner {
+    padding-inline: 20px;
+    gap: 12px;
+  }
+  .desktop-nav a {
+    padding-inline: 12px;
+    font-size: 11px;
+  }
+  .header-account {
+    padding: 10px;
+  }
+  .header-account span {
+    display: none;
+  }
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  min-width: 0;
+}
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  border: 1px solid #42614f;
+  border-radius: 50%;
+  background: #10251b;
+  color: #bdff00;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.theme-toggle svg {
+  width: 22px;
+  height: 22px;
+}
+.theme-toggle:hover {
+  border-color: #bdff00;
+}
+.theme-toggle:focus-visible {
+  outline: 3px solid #00df88;
+  outline-offset: 3px;
+}
+.theme-corner {
+  position: fixed;
+  right: 24px;
+  top: 17px;
+  z-index: 100;
+}
+/* Reservar espacio al control en encabezados sin la barra de cliente. */
+.access-top {
+  padding-right: 80px;
+}
+gg-platform-dashboard .platform-topbar {
+  padding-right: 90px;
+}
+
+html[data-theme='light'] {
+  color-scheme: light;
+  --paper: #fff;
+  --ink: #101713;
+  --muted: #52645a;
+  --line: #ccd8d0;
+  --green: #08784c;
+  --cyan: #08784c;
+  --blue: #08784c;
+  --electric: #08784c;
+  --club-backdrop:
+    url('/assets/club-field.svg') right top / 1440px 960px repeat-y,
+    linear-gradient(90deg, #10171308 1px, transparent 1px) 0 0 / 80px 80px repeat,
+    linear-gradient(#10171308 1px, transparent 1px) 0 0 / 80px 80px repeat, #fff;
+}
+html[data-theme='light'] body {
+  color: var(--ink);
+  background: var(--club-backdrop);
+}
+html[data-theme='light'] ::selection {
+  background: #bdff00;
+  color: #101713;
+}
+html[data-theme='light'] :is(.site-header, .mobile-nav) {
+  background: #ffffffed;
+  border-color: var(--line);
+}
+html[data-theme='light'] :is(.site-header .brand, .access-top .brand, .site-footer .brand) {
+  color: #101713;
+}
+html[data-theme='light']
+  :is(
+    .site-header .brand-go,
+    .site-header .brand-dot,
+    .access-top .brand-go,
+    .access-top .brand-dot,
+    .site-footer .brand-go
+  ) {
+  color: #08784c;
+}
+html[data-theme='light'] .theme-toggle {
+  background: #fff;
+  color: #101713;
+  border-color: #a2b8aa;
+}
+html[data-theme='light'] .theme-toggle:hover {
+  background: #bdff00;
+  border-color: #101713;
+}
+html[data-theme='light'] .desktop-nav {
+  background: #eff3f0;
+}
+html[data-theme='light'] :is(.desktop-nav a, .header-account, .mobile-nav a) {
+  color: #304e3c;
+  border-color: var(--line);
+}
+html[data-theme='light']
+  :is(.desktop-nav a.active, .mobile-nav a.active, .mobile-nav a.active gg-icon) {
+  background: #bdff00;
+  color: #101713;
+}
+html[data-theme='light']
+  :is(
+    .page-heading h1,
+    .home-greeting h1,
+    .home-section-title h2,
+    .steps-intro h2,
+    .time-group-title h2,
+    .ops-agenda-heading h2,
+    .ops-content > .section-heading h2
+  ) {
+  color: #101713;
+}
+html[data-theme='light']
+  :is(
+    .page-heading p,
+    .back-link,
+    .section-index,
+    .list-label,
+    .site-footer,
+    .booking-progress li,
+    .time-group-title > span,
+    .slot-legend
+  ) {
+  color: #52645a;
+}
+html[data-theme='light'] .site-footer {
+  border-color: var(--line);
+}
+html[data-theme='light']
+  :is(
+    .panel,
+    .photo-choice,
+    .choice-info,
+    .access-card,
+    .price-strip,
+    .booking-context,
+    .selected-date,
+    .booking-bottom,
+    .security-panel,
+    .establishment-information,
+    .hero-photo-card,
+    .home-quick-links > a,
+    .home-quick-links > a:nth-child(2),
+    .profile-sidebar,
+    .ops-topbar,
+    .ops-filters,
+    .ops-nav
+  ) {
+  background: #fff;
+  color: var(--ink);
+  border-color: var(--line);
+}
+html[data-theme='light']
+  :is(
+    .panel h1,
+    .panel h2,
+    .panel h3,
+    .choice-info h2,
+    .choice-info p,
+    .price-strip strong,
+    .price-strip span,
+    .home-quick-links strong,
+    .home-quick-links > a > gg-icon,
+    .sport-steps strong
+  ) {
+  color: #101713;
+}
+html[data-theme='light']
+  :is(
+    .panel .eyebrow,
+    .choice-info .eyebrow,
+    .home-quick-links > a > span:not(.quick-icon),
+    .sport-steps p
+  ) {
+  color: #52645a;
+}
+html[data-theme='light']
+  :is(
+    .eyebrow,
+    .green-text,
+    .cyan-text,
+    .booking-progress li.current,
+    .chosen-date-line .text-button
+  ) {
+  color: #08784c;
+}
+html[data-theme='light']
+  :is(
+    .user-bubble,
+    .quick-icon,
+    .soft-icon,
+    .empty-icon,
+    .empty-small,
+    .form-symbol,
+    .home-quick-links .quick-icon
+  ) {
+  background: #eaf4ee;
+  color: #08784c;
+  border-color: var(--line);
+}
+html[data-theme='light'] :is(.sport-steps, .time-group-title) {
+  border-color: var(--line);
+}
+html[data-theme='light'] :is(.choice-chips span, .tag, .tag.confirmed) {
+  background: #edf5ef;
+  color: #21593b;
+  border-color: #b2cfbd;
+}
+html[data-theme='light'] .button-outline {
+  color: #173c2a;
+  border-color: #87aa93;
+}
+html[data-theme='light'] .button-outline:hover:not(:disabled) {
+  background: #eaf4ee;
+}
+html[data-theme='light'] :is(.button-primary, .access-card .button-primary) {
+  background: #101713;
+  color: #bdff00;
+}
+html[data-theme='light'] :is(.play-banner, .staff-title, gg-platform-dashboard .platform-welcome) {
+  background: #101713;
+  border-color: #263c2e;
+  color: #fff;
+}
+html[data-theme='light']
+  :is(
+    .play-banner h1,
+    .play-banner p,
+    .staff-title h1,
+    .staff-title p,
+    .hero-label,
+    .staff-title .eyebrow
+  ) {
+  color: #ecfff3;
+}
+html[data-theme='light'] .play-banner h1 em {
+  color: #bdff00;
+}
+html[data-theme='light'] :is(.hero-photo-card strong, .hero-photo-card p) {
+  color: #101713;
+}
+html[data-theme='light']
+  :is(
+    .search-box input,
+    form input,
+    form select,
+    form textarea,
+    .ops-page input,
+    .ops-page select,
+    .ops-page textarea,
+    .access-card input,
+    .share-options textarea
+  ) {
+  background: #f6f8f6;
+  color: #101713;
+  border-color: #adc2b4;
+}
+html[data-theme='light'] .search-box {
+  background: #fff;
+  border-color: #adc2b4;
+  color: #52645a;
+}
+html[data-theme='light'] :is(form input::placeholder, .access-card input::placeholder) {
+  color: #61776a;
+}
+html[data-theme='light'] form input:disabled {
+  background: #e9eeeb;
+  color: #61776a;
+}
+html[data-theme='light'] .calendar-grid button {
+  background: #f1f5f2;
+  color: #173c2a;
+  border-color: #d2ded6;
+}
+html[data-theme='light'] .calendar-grid button:disabled {
+  color: #718178;
+  background: #f6f8f6;
+}
+html[data-theme='light'] .time-grid button {
+  background: #fff;
+  color: #173c2a;
+  border-color: #b7cdbf;
+}
+html[data-theme='light'] .time-grid button:disabled {
+  background: #edf0ee;
+  color: #718178;
+}
+html[data-theme='light']
+  :is(
+    .calendar-grid button.selected,
+    .time-grid button.selected,
+    .rating-stars button.selected,
+    .ops-stats .panel:first-child
+  ) {
+  background: #bdff00;
+  color: #101713;
+  border-color: #abd900;
+}
+html[data-theme='light'] :is(.time-grid button.selected strong, .time-grid button.selected > span) {
+  color: #101713;
+}
+html[data-theme='light'] .notice {
+  background: #f0f6f2;
+  color: #214c34;
+  border-color: #b7d2c0;
+}
+html[data-theme='light'] .notice-error {
+  background: #fff1ec;
+  color: #8b3219;
+  border-color: #e9b7a8;
+}
+html[data-theme='light'] .notice-success {
+  background: #edf9ef;
+  color: #1f6039;
+  border-color: #a9d7b5;
+}
+html[data-theme='light'] .ops-nav button.active {
+  color: #17633e;
+  background: #e0f1e5;
+}
+html[data-theme='light'] .access-scene {
+  background: var(--club-backdrop);
+}
+html[data-theme='light'] :is(.access-footer, .access-edition) {
+  color: #294c37;
+  border-color: #a2b8aa;
+}
+html[data-theme='light'] gg-platform-dashboard .platform-shell {
+  color: #101713;
+}
+html[data-theme='light'] gg-platform-dashboard .platform-sidebar {
+  background: #fff;
+  color: #101713;
+  border-color: var(--line);
+}
+html[data-theme='light'] gg-platform-dashboard .platform-sidebar .brand {
+  color: #101713;
+}
+html[data-theme='light']
+  gg-platform-dashboard
+  :is(.platform-sidebar .brand-go, .platform-edition span) {
+  color: #08784c;
+}
+html[data-theme='light']
+  gg-platform-dashboard
+  :is(
+    .platform-sidebar nav a,
+    .platform-edition,
+    .nav-label,
+    .sidebar-bottom small,
+    .sidebar-logout,
+    .platform-topbar > span,
+    .platform-heading p,
+    .platform-metrics span,
+    .platform-metrics small
+  ) {
+  color: #52645a;
+}
+html[data-theme='light'] gg-platform-dashboard .platform-sidebar nav a.selected {
+  background: #bdff00;
+  color: #101713;
+}
+html[data-theme='light'] gg-platform-dashboard .sidebar-bottom {
+  background: #eff4f0;
+}
+html[data-theme='light'] gg-platform-dashboard :is(.sidebar-bottom strong, .platform-heading h1) {
+  color: #101713;
+}
+html[data-theme='light'] gg-platform-dashboard .platform-topbar {
+  background: #fffffff0;
+  border-color: var(--line);
+}
+html[data-theme='light'] gg-platform-dashboard .environment-pill {
+  background: #eef5f0;
+  color: #21593b;
+  border-color: #b2cfbd;
+}
+html[data-theme='light'] gg-platform-dashboard :is(.platform-metrics .panel, .onboarding) {
+  background: #fff;
+  border-color: var(--line);
+}
+html[data-theme='light'] gg-platform-dashboard .platform-metrics .panel:first-child {
+  background: #bdff00;
+}
+html[data-theme='light']
+  gg-platform-dashboard
+  .platform-metrics
+  .panel:first-child
+  :is(span, strong, small, gg-icon) {
+  color: #101713;
+}
+html[data-theme='light'] gg-platform-dashboard :is(input, select, textarea) {
+  background: #f6f8f6;
+  color: #101713;
+  border-color: #adc2b4;
+}
+html[data-theme='light'] gg-platform-dashboard table th {
+  background: #edf4ef;
+  color: #294c37;
+}
+html[data-theme='light'] gg-platform-dashboard table td {
+  color: #101713;
+  border-color: var(--line);
+}
+html[data-theme='light'] gg-business-editor :is(.editor-section, .editor-steps, .editor-actions) {
+  background: #fff;
+  border-color: var(--line);
+}
+html[data-theme='light'] gg-business-editor .editor-steps button {
+  color: #52645a;
+}
+html[data-theme='light'] gg-business-editor .editor-steps button.current {
+  background: #bdff00;
+  color: #101713;
+}
+@media (max-width: 700px) {
+  .header-actions {
+    gap: 8px;
+  }
+  .header-actions .header-account {
+    max-width: none;
+  }
+  .header-actions .header-account span {
+    display: none;
+  }
+  .theme-corner {
+    top: 14px;
+    right: 16px;
+  }
+  .access-top {
+    padding-right: 60px;
+  }
+  .access-edition {
+    display: none;
+  }
+  gg-platform-dashboard .platform-topbar {
+    padding-right: 70px;
+  }
+  html[data-theme='light'] .access-card {
+    background: #fffffff2;
+  }
+  html[data-theme='light'] .access-scene::before {
+    opacity: 0.32;
+  }
+}

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-[#070b0e]" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GRASSGO | Iniciar Sesión</title>
+<!-- Google Fonts: Syne & Plus Jakarta Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Syne:wght@700;800;900&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              dark: '#080d12',
+              card: '#0f1720',
+              cyan: '#00f0ff',
+              lime: '#ccff00',
+              neonGreen: '#00ff88',
+              accent: '#ff2e79',
+            }
+          },
+          fontFamily: {
+            display: ['Syne', 'sans-serif'],
+            sans: ['Plus Jakarta Sans', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Styles: Focus glow & utilities -->
+<style data-purpose="custom-glow-effects">
+    .neon-input-focus:focus {
+      border-color: #00f0ff;
+      box-shadow: 0 0 0 1px #00f0ff, 0 0 20px -3px rgba(0, 240, 255, 0.35);
+    }
+    .neon-button-glow {
+      box-shadow: 0 0 25px -4px rgba(204, 255, 0, 0.45);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .neon-button-glow:hover {
+      box-shadow: 0 0 35px 2px rgba(204, 255, 0, 0.7);
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body class="h-full text-slate-200 antialiased font-sans selection:bg-[#ccff00] selection:text-black">
+<!-- BEGIN: MainContainer -->
+<main class="min-h-screen w-full flex flex-col lg:flex-row overflow-x-hidden bg-[#070b0e]">
+<!-- BEGIN: LeftVisualColumn -->
+<section aria-label="Visual del Complejo" class="relative hidden lg:flex lg:w-7/12 xl:w-3/5 overflow-hidden bg-black items-end">
+<!-- Background Sports Visual -->
+<img alt="High-end cinematic sports visual for football soccer complex night game, illuminated modern synthetic turf pitch with electric vibrant neon lighting accents, dynamic sports atmosphere, sleek and energetic, 4k resolution" class="absolute inset-0 w-full h-full object-cover object-center scale-[1.02] transform transition-transform duration-1000 ease-out hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBurarUTle693CpzwC5c87nAHKX3IejmFVLgg7bwax7kNJoAm2bGxVXYR1SXKrZWcnPorIBmwjWkpBYfuo24WLKlS8GoRUgy5l2oMixhv5L8eqLypJDTJPebTuajJlGY84uPTp8NY8g7s-u_7Z3_2kFgpnqLlU0SYaCqLASXLgXhDj6JpRTjfE8cS5NU7Pj8CBrb6jYI-M1QLSDNbZHRCs3oVLbUHPyHnjrdum9D6Z9L-W9PkrUi1vNJg"/>
+<!-- Atmospheric Overlays & Color Lighting -->
+<div class="absolute inset-0 bg-gradient-to-t from-[#070b0e] via-[#070b0e]/30 to-black/30 pointer-events-none"></div>
+<div class="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#070b0e] pointer-events-none"></div>
+<!-- Subtle Accent Glow Rings -->
+<div class="absolute top-12 left-12 w-64 h-64 bg-[#00f0ff]/15 rounded-full blur-[90px] pointer-events-none"></div>
+<div class="absolute bottom-16 right-16 w-80 h-80 bg-[#ccff00]/10 rounded-full blur-[100px] pointer-events-none"></div>
+<!-- Minimal Live Match Badge / Brand Aura -->
+<div class="relative z-10 p-10 xl:p-14 w-full flex items-center justify-between">
+<div class="flex items-center gap-3 bg-[#080d12]/80 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 shadow-2xl">
+<span class="relative flex h-2.5 w-2.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ff88] opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#00ff88]"></span>
+</span>
+<span class="text-xs uppercase tracking-widest font-semibold text-slate-300">Canchas Disponibles en Tiempo Real</span>
+</div>
+<div class="text-right">
+<span class="text-xs text-white/50 uppercase tracking-widest block font-medium">Complejo Deportivo</span>
+<span class="text-sm font-bold text-white tracking-wider">ELITE NIGHT LEAGUE</span>
+</div>
+</div>
+</section>
+<!-- END: LeftVisualColumn -->
+<!-- BEGIN: RightAuthColumn -->
+<section class="flex-1 flex flex-col justify-between p-6 sm:p-10 md:p-14 lg:p-12 xl:p-16 min-h-screen relative z-10 bg-[#070b0e]">
+<!-- Top Brand Header Bar -->
+<header class="flex items-center justify-between pt-2">
+<div class="flex items-center gap-2">
+<!-- Dynamic Logo Symbol -->
+<div class="w-8 h-8 rounded-lg bg-[#ccff00] flex items-center justify-center font-display font-black text-black text-lg shadow-[0_0_15px_rgba(204,255,0,0.5)]">
+            G
+          </div>
+<span class="text-2xl font-display font-extrabold tracking-tight text-white">
+            GRASS<span class="text-[#00f0ff]">GO</span>
+</span>
+</div>
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/5 border border-white/10 text-slate-400">
+<span class="h-1.5 w-1.5 rounded-full bg-[#00f0ff]"></span>
+          v2.4
+        </div>
+</header>
+<!-- Center Login Form Area -->
+<div class="max-w-md w-full mx-auto my-auto py-8">
+<!-- Welcome Title & Subtitle -->
+<div class="mb-8 text-left">
+<div class="inline-block text-[#ccff00] text-xs font-bold uppercase tracking-widest mb-2 font-display">
+            Fast Booking
+          </div>
+<h1 class="text-3xl sm:text-4xl font-display font-extrabold text-white tracking-tight leading-none mb-3">
+            BIENVENIDO
+          </h1>
+<p class="text-sm text-slate-400">
+            Reserva tu cancha en segundos y salta al juego.
+          </p>
+</div>
+<!-- Form Element -->
+<form action="#" class="space-y-5" id="loginForm" method="POST" onsubmit="event.preventDefault();">
+<!-- Field: Email -->
+<div data-purpose="input-group">
+<label class="block text-xs font-medium uppercase tracking-wider text-slate-300 mb-2" for="email">
+              Correo electrónico
+            </label>
+<div class="relative">
+<input autocomplete="email" class="neon-input-focus w-full px-4 py-3.5 bg-[#0e161f] border border-slate-800 rounded-xl text-white placeholder-slate-500 text-sm outline-none transition duration-200" id="email" name="email" placeholder="tu@correo.com" required="" type="email"/>
+<div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-500">
+<svg class="h-4 w-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+</div>
+<!-- Field: Password -->
+<div data-purpose="input-group">
+<div class="flex items-center justify-between mb-2">
+<label class="block text-xs font-medium uppercase tracking-wider text-slate-300" for="password">
+                Contraseña
+              </label>
+<a class="text-xs text-[#00f0ff] hover:text-[#00ff88] transition font-medium" href="#">
+                ¿Olvidaste tu contraseña?
+              </a>
+</div>
+<div class="relative">
+<input autocomplete="current-password" class="neon-input-focus w-full px-4 py-3.5 bg-[#0e161f] border border-slate-800 rounded-xl text-white placeholder-slate-500 text-sm outline-none transition duration-200" id="password" name="password" placeholder="••••••••••••" required="" type="password"/>
+<!-- Toggle Password Button -->
+<button aria-label="Alternar visibilidad de contraseña" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 focus:outline-none transition" id="togglePassword" type="button">
+<svg class="h-4 w-4" fill="none" id="eyeIcon" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+</div>
+<!-- Action Button -->
+<div class="pt-2">
+<button class="neon-button-glow w-full py-4 px-6 rounded-xl font-display font-black text-sm tracking-wider uppercase bg-[#ccff00] text-black hover:bg-[#d8ff33] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer border border-transparent" type="submit">
+<span>Ingresar a la Cancha</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M13 7l5 5m0 0l-5 5m5-5H6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+</button>
+</div>
+</form>
+<!-- Register Link -->
+<p class="mt-8 text-center text-sm text-slate-400">
+          ¿No tienes cuenta?
+          <a class="font-semibold text-[#00f0ff] hover:text-[#00ff88] transition ml-1 underline underline-offset-4 decoration-transparent hover:decoration-[#00ff88]" href="registro.html" id="registerLink">
+            Regístrate aquí
+          </a>
+</p>
+</div>
+<!-- Bottom Simple Legal / Copyright -->
+<footer class="text-center sm:text-left text-xs text-slate-600 pb-1 flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-slate-800/60 pt-4">
+<span>© 2025 GRASSGO Sports Complex. Todos los derechos reservados.</span>
+<div class="flex gap-4">
+<a class="hover:text-slate-400 transition" href="#">Términos</a>
+<a class="hover:text-slate-400 transition" href="#">Privacidad</a>
+</div>
+</footer>
+</section>
+<!-- END: RightAuthColumn -->
+</main>
+<!-- END: MainContainer -->
+
+<!-- Firebase SDK Scripts -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-grassgo.js"></script>
+<script src="grassgo-alerts.js"></script>
+
+<!-- BEGIN: InteractiveScripts -->
+<script data-purpose="password-visibility-toggle">
+    const toggleBtn = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+    const eyeIcon = document.getElementById('eyeIcon');
+
+    if (toggleBtn && passwordInput && eyeIcon) {
+      toggleBtn.addEventListener('click', () => {
+        const isPassword = passwordInput.getAttribute('type') === 'password';
+        passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+
+        // Update SVG icon representation
+        if (isPassword) {
+          eyeIcon.innerHTML = `
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+          `;
+        } else {
+          eyeIcon.innerHTML = `
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          `;
+        }
+      });
+    }
+  </script>
+<!-- END: InteractiveScripts -->
+
+<!-- BEGIN: GRASSGO Database Authentication -->
+<script>
+  // Funcionalidad del botón "Ingresar a la Cancha" con Base de Datos
+  document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+
+    if (!email || !password) {
+      GrassgoAlert.warning('Por favor completa tu correo y contraseña para ingresar a la cancha.', 'Campos Requeridos');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<span>Iniciando sesión...</span>`;
+
+    try {
+      // Iniciar sesión con Firebase Auth y consultar datos en Firestore
+      const user = await Grassgo.loginUser(email, password);
+
+      // Redirige a canchas.html
+      const targetUrl = window.location.pathname.endsWith('.html')
+        ? window.location.pathname.replace(/[^/]+$/, 'canchas.html')
+        : 'canchas.html';
+      window.location.href = targetUrl;
+    } catch (err) {
+      console.error(err);
+      GrassgoAlert.error(err.message || 'Error al iniciar sesión. Verifica tu correo y contraseña.', 'Inicio de Sesión');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+    }
+  });
+
+  // Funcionalidad del enlace "Regístrate aquí"
+  document.getElementById('registerLink').addEventListener('click', function(e) {
+    e.preventDefault();
+    const targetUrl = window.location.pathname.endsWith('.html')
+      ? window.location.pathname.replace(/[^/]+$/, 'registro.html')
+      : 'registro.html';
+    window.location.href = targetUrl;
+  });
+
+  // Funcionalidad del enlace "¿Olvidaste tu contraseña?"
+  document.querySelector('a[href="#"]:has(> *), a[href="#"]')?.addEventListener('click', async function(e) {
+    if (this.textContent.includes('Olvidaste')) {
+      e.preventDefault();
+      const mail = await GrassgoAlert.prompt('Recuperar Contraseña', 'tu@correo.com', 'email');
+      if (mail) {
+        GrassgoAlert.success(`Si ${mail} está registrado, recibirás un enlace de restablecimiento.`, 'Correo Enviado');
+      }
+    }
+  });
+</script>
+<!-- END: GRASSGO Database Authentication -->
+
+</body></html>

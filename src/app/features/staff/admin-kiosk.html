@@ -1,0 +1,507 @@
+<section class="kiosk" aria-labelledby="kiosk-title">
+  <header class="kiosk-heading">
+    <span class="eyebrow">{{
+      context() === 'platform' ? 'SUPERADMIN · KIOSKO DEL NEGOCIO' : 'VENTAS DE TU ESTABLECIMIENTO'
+    }}</span>
+    <h2 id="kiosk-title">Tu kiosko, a la mano</h2>
+    <p>
+      Vende productos, repón unidades y consulta el stock. Registra cada venta después de recibir el
+      pago.
+    </p>
+  </header>
+  <nav class="kiosk-tabs" aria-label="Opciones del kiosko">
+    <button
+      class="button"
+      [class.button-primary]="section() === 'sell'"
+      [class.button-outline]="section() !== 'sell'"
+      [attr.aria-pressed]="section() === 'sell'"
+      [disabled]="busy()"
+      (click)="setSection('sell')"
+    >
+      <gg-icon name="check" /> Vender
+    </button>
+    <button
+      class="button"
+      [class.button-primary]="section() === 'products'"
+      [class.button-outline]="section() !== 'products'"
+      [attr.aria-pressed]="section() === 'products'"
+      [disabled]="busy()"
+      (click)="setSection('products')"
+    >
+      <gg-icon name="grid" /> Productos y stock
+    </button>
+    <button
+      class="button"
+      [class.button-primary]="section() === 'history'"
+      [class.button-outline]="section() !== 'history'"
+      [attr.aria-pressed]="section() === 'history'"
+      [disabled]="busy()"
+      (click)="setSection('history')"
+    >
+      <gg-icon name="clock" /> Movimientos
+    </button>
+  </nav>
+  @if (message()) {
+    <p class="notice notice-success" role="status">{{ message() }}</p>
+  }
+  @if (error()) {
+    <p class="notice notice-error" role="alert">{{ error() }}</p>
+  }
+  @if (loadError()) {
+    <div class="notice notice-error" role="alert">
+      <p>{{ loadError() }}</p>
+      <button
+        class="button button-outline"
+        (click)="load()"
+        [disabled]="busy() || hasUnsavedChanges()"
+      >
+        Volver a consultar el stock
+      </button>
+    </div>
+  }
+  @if (loading()) {
+    <div class="panel kiosk-empty" role="status">Consultando tus productos…</div>
+  } @else if (!loadError()) {
+    @if (form() === 'create' || form() === 'edit') {
+      <section class="panel kiosk-form" aria-labelledby="kiosk-product-title">
+        <h3 id="kiosk-product-title">
+          {{ form() === 'create' ? 'Añadir un producto' : 'Editar producto' }}
+        </h3>
+        <form (ngSubmit)="saveProduct()">
+          <fieldset [disabled]="busy() || locked()">
+            <div class="kiosk-fields">
+              <label
+                >Nombre del producto<input
+                  name="productName"
+                  [(ngModel)]="productDraft().name"
+                  required
+                  minlength="2"
+                  maxlength="100"
+                  autocomplete="off"
+                  placeholder="Nombre para identificarlo"
+              /></label>
+              <label
+                >Categoría (opcional)<input
+                  name="productCategory"
+                  [(ngModel)]="productDraft().category"
+                  maxlength="40"
+                  placeholder="Agrupa tus productos si lo necesitas"
+              /></label>
+              <label
+                >Precio de venta por unidad (S/)<input
+                  name="productPrice"
+                  [(ngModel)]="productDraft().price"
+                  inputmode="decimal"
+                  required
+                  maxlength="8"
+                  placeholder="Escribe el precio real"
+              /></label>
+              <label
+                >Costo de compra por unidad (S/, opcional)<input
+                  name="productCost"
+                  [(ngModel)]="productDraft().cost"
+                  inputmode="decimal"
+                  maxlength="8"
+                  placeholder="Déjalo vacío si no lo conoces"
+                /><small
+                  >Se descuenta del precio para calcular la ganancia bruta. Puedes indicar un costo
+                  de cero si corresponde.</small
+                ></label
+              >
+              @if (form() === 'create') {
+                <label
+                  >¿Cuántas unidades tienes?<input
+                    name="initialStock"
+                    type="number"
+                    [(ngModel)]="productDraft().initialStock"
+                    min="0"
+                    max="1000000"
+                    step="1"
+                    required
+                    placeholder="Stock inicial real"
+                /></label>
+              } @else {
+                <label class="check-line"
+                  ><input
+                    type="checkbox"
+                    name="productActive"
+                    [(ngModel)]="productDraft().active"
+                  />
+                  Disponible para vender</label
+                >
+                <p class="kiosk-help">
+                  Al desactivarlo se conserva el stock y su historial. Para agregar unidades usa
+                  Reponer stock.
+                </p>
+              }
+            </div>
+            <div class="photo-editor">
+              <strong>Foto del producto (opcional)</strong>
+              <p class="kiosk-help">
+                Elige una imagen JPG, PNG o WebP de hasta 5 MB. También puedes guardar el producto
+                sin foto.
+              </p>
+              <input
+                #productPhoto
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                hidden
+                style="display: none"
+                (change)="selectPhoto($any($event.target))"
+              />
+              @if (productDraft().photo; as photo) {
+                <img
+                  class="product-photo"
+                  [src]="photo"
+                  [alt]="'Foto de ' + (productDraft().name || 'tu producto')"
+                />
+              }
+              <div class="kiosk-actions">
+                <button
+                  type="button"
+                  class="button button-outline"
+                  (click)="productPhoto.click()"
+                  [disabled]="busy() || locked()"
+                >
+                  <gg-icon name="upload" />
+                  {{ productDraft().photo ? 'Cambiar foto' : 'Adjuntar foto' }}
+                </button>
+                @if (productDraft().photo || photoPreparing()) {
+                  <button
+                    type="button"
+                    class="button button-outline"
+                    (click)="removePhoto()"
+                    [disabled]="busy() || locked()"
+                  >
+                    {{ photoPreparing() ? 'Cancelar preparación' : 'Quitar foto' }}
+                  </button>
+                }
+              </div>
+              @if (photoPreparing()) {
+                <p role="status">Preparando la foto…</p>
+              }
+              @if (photoError()) {
+                <p class="notice notice-error" role="alert">{{ photoError() }}</p>
+              }
+            </div>
+          </fieldset>
+          @if (locked() && !busy()) {
+            <p class="notice">
+              Los datos de este intento se conservan. Reintenta el guardado para confirmar el
+              resultado sin duplicar la operación.
+            </p>
+          }
+          <div class="kiosk-actions">
+            <button
+              type="button"
+              class="button button-outline"
+              (click)="closeForm()"
+              [disabled]="busy()"
+            >
+              Volver sin guardar</button
+            ><button type="submit" class="button button-primary" [disabled]="isSaving()">
+              {{
+                busy()
+                  ? 'Guardando…'
+                  : locked()
+                    ? 'Reintentar guardado'
+                    : form() === 'create'
+                      ? 'Guardar producto'
+                      : 'Guardar cambios'
+              }}
+            </button>
+          </div>
+        </form>
+      </section>
+    } @else if (selectedProduct(); as product) {
+      <section class="panel kiosk-form" aria-labelledby="kiosk-action-title">
+        <h3 id="kiosk-action-title">
+          {{ form() === 'sale' ? 'Vender' : 'Reponer stock de' }} {{ product.name }}
+        </h3>
+        @if (product.photo; as photo) {
+          <img
+            class="product-photo selected-photo"
+            [src]="photo"
+            [alt]="'Foto de ' + product.name"
+          />
+        }
+        <p class="stock-label">
+          Stock disponible: <strong>{{ product.stock }} unidad(es)</strong>
+        </p>
+        <form (ngSubmit)="saveAction()">
+          <fieldset [disabled]="busy() || locked()">
+            <label for="kiosk-quantity">{{
+              form() === 'sale' ? '¿Cuántas unidades vendes?' : '¿Cuántas unidades llegaron?'
+            }}</label>
+            <div class="quantity-controls">
+              <button
+                type="button"
+                class="button button-outline"
+                aria-label="Quitar una unidad"
+                (click)="stepQuantity(-1)"
+                [disabled]="quantity() === 1"
+              >
+                −</button
+              ><input
+                id="kiosk-quantity"
+                name="quantity"
+                type="number"
+                [ngModel]="quantity()"
+                (ngModelChange)="quantity.set($event)"
+                min="1"
+                [max]="form() === 'sale' ? product.stock : 1000000"
+                step="1"
+                required
+              /><button
+                type="button"
+                class="button button-outline"
+                aria-label="Añadir una unidad"
+                (click)="stepQuantity(1)"
+                [disabled]="form() === 'sale' && (quantity() || 0) >= product.stock"
+              >
+                +
+              </button>
+            </div>
+            @if (form() === 'sale') {
+              <div class="sale-summary">
+                <span
+                  >Precio por unidad <strong>{{ money(product.priceCents) }}</strong></span
+                ><span
+                  >Total a cobrar <strong>{{ money(saleTotal()) }}</strong></span
+                >
+                @if (saleProfit() !== null) {
+                  <span
+                    >Ganancia bruta de productos <strong>{{ money(saleProfit()!) }}</strong></span
+                  >
+                } @else {
+                  <p>
+                    Este producto no tiene costo registrado. Su venta se contará como ingreso; su
+                    ganancia bruta quedará pendiente.
+                  </p>
+                }
+              </div>
+              <label
+                >¿Cómo te pagaron?<select
+                  name="paymentMethod"
+                  [ngModel]="paymentMethod()"
+                  (ngModelChange)="paymentMethod.set($event)"
+                  required
+                >
+                  <option value="" disabled>Elige el método recibido</option>
+                  <option value="cash">Efectivo</option>
+                  <option value="yape">Yape</option>
+                  <option value="plin">Plin</option>
+                </select></label
+              >
+              <label class="check-line payment-confirm"
+                ><input
+                  type="checkbox"
+                  name="paymentReceived"
+                  [ngModel]="paymentReceived()"
+                  (ngModelChange)="paymentReceived.set($event)"
+                />
+                Confirmo que ya recibí {{ money(saleTotal()) }} por esta venta.</label
+              >
+            } @else {
+              <p class="sale-summary">
+                Stock después de reponer:
+                <strong>{{ product.stock + (quantity() || 0) }} unidad(es)</strong>
+              </p>
+            }
+          </fieldset>
+          @if (locked() && !busy()) {
+            <p class="notice">
+              Conservamos este intento. Reintenta para confirmar el resultado sin duplicar la
+              operación.
+            </p>
+          }
+          <div class="kiosk-actions">
+            <button
+              class="button button-outline"
+              type="button"
+              [disabled]="busy()"
+              (click)="closeForm()"
+            >
+              Volver a los productos</button
+            ><button
+              class="button button-primary"
+              type="submit"
+              [disabled]="busy() || (form() === 'sale' && (!paymentMethod() || !paymentReceived()))"
+            >
+              {{
+                busy()
+                  ? 'Registrando…'
+                  : locked()
+                    ? 'Reintentar registro'
+                    : form() === 'sale'
+                      ? 'Registrar venta recibida'
+                      : 'Guardar reposición'
+              }}
+            </button>
+          </div>
+        </form>
+      </section>
+    }
+    @if (section() === 'history') {
+      <section class="panel kiosk-history" aria-label="Últimos movimientos del kiosko">
+        <div class="kiosk-line">
+          <div>
+            <h3>Últimos movimientos</h3>
+            <p>
+              Las últimas 30 operaciones, con hora de Lima. Los totales por día, semana y mes están
+              en Ingresos.
+            </p>
+          </div>
+          <button
+            class="button button-outline"
+            (click)="loadHistory()"
+            [disabled]="historyLoading()"
+          >
+            Actualizar
+          </button>
+        </div>
+        @if (historyLoading()) {
+          <p role="status">Consultando movimientos…</p>
+        } @else if (historyError()) {
+          <p class="notice notice-error" role="alert">{{ historyError() }}</p>
+        } @else {
+          @for (movement of movements(); track movement.id) {
+            <article class="movement">
+              <div>
+                <strong
+                  >{{ movementLabel(movement.kind) }} · {{ movement.productSnapshot.name }}</strong
+                ><span>{{ timeLabel(movement.at) }}</span>
+              </div>
+              <p>
+                {{
+                  movement.kind === 'sale'
+                    ? 'Vendidas: '
+                    : movement.kind === 'restock'
+                      ? 'Unidades recibidas: '
+                      : 'Unidades registradas: '
+                }}{{ movement.quantity }} · Stock {{ movement.stockBefore }} →
+                {{ movement.stockAfter }}
+              </p>
+              @if (movement.kind === 'sale') {
+                <strong>{{ money(movement.totalCents) }}</strong>
+              }
+            </article>
+          } @empty {
+            <p>Todavía no hay movimientos registrados.</p>
+          }
+        }
+      </section>
+    } @else if (!products().length) {
+      @if (!form()) {
+        <section class="panel kiosk-empty">
+          <gg-icon name="grid" />
+          <h3>Empieza con tu primer producto</h3>
+          <p>Agrega su nombre, precio y stock real para comenzar a vender.</p>
+          <button class="button button-primary" (click)="openProduct()">
+            <gg-icon name="plus" /> Añadir mi primer producto
+          </button>
+        </section>
+      }
+    } @else {
+      <div class="kiosk-line">
+        <p>
+          <strong>{{ activeCount() }}</strong> producto(s) disponible(s) ·
+          <strong>{{ emptyCount() }}</strong> sin stock
+        </p>
+        @if (section() === 'products') {
+          <button class="button button-primary" (click)="openProduct()" [disabled]="busy()">
+            <gg-icon name="plus" /> Añadir producto
+          </button>
+        }
+      </div>
+      <div class="kiosk-search">
+        <label
+          >Buscar producto<input
+            name="searchProducts"
+            type="search"
+            [ngModel]="search()"
+            (ngModelChange)="search.set($event)"
+            placeholder="Escribe el nombre o categoría"
+        /></label>
+        @if (section() === 'products') {
+          <label class="check-line"
+            ><input
+              type="checkbox"
+              name="includeArchived"
+              [ngModel]="includeArchived()"
+              (ngModelChange)="includeArchived.set($event)"
+            />
+            Mostrar también los desactivados</label
+          >
+        }
+      </div>
+      @if (section() === 'sell') {
+        <p class="kiosk-help">
+          Toca un producto para venderlo. Si vendes varios productos distintos, registra cada uno
+          con su cantidad.
+        </p>
+      }
+      <div class="product-grid">
+        @for (product of shownProducts(); track product.id) {
+          @if (section() === 'sell') {
+            <button
+              class="product-card"
+              [disabled]="busy() || product.stock === 0"
+              (click)="openAction(product, 'sale')"
+            >
+              @if (product.photo; as photo) {
+                <img class="product-photo" [src]="photo" [alt]="'Foto de ' + product.name" />
+              }
+              <span class="product-category">{{ product.category || 'Producto' }}</span
+              ><strong>{{ product.name }}</strong
+              ><span class="product-price">{{ money(product.priceCents) }}</span
+              ><span class="stock-label" [class.no-stock]="product.stock === 0">{{
+                product.stock === 0 ? 'Sin stock' : product.stock + ' unidad(es) disponibles'
+              }}</span
+              ><span class="card-action">{{
+                product.stock === 0 ? 'Repón para volver a vender' : 'Vender este producto →'
+              }}</span>
+            </button>
+          } @else {
+            <article class="panel stock-card">
+              @if (product.photo; as photo) {
+                <img class="product-photo" [src]="photo" [alt]="'Foto de ' + product.name" />
+              }
+              <span class="product-category">{{
+                product.active ? product.category || 'Disponible' : 'Desactivado'
+              }}</span>
+              <h3>{{ product.name }}</h3>
+              <p class="product-price">{{ money(product.priceCents) }} <small>por unidad</small></p>
+              <p>
+                Costo por unidad:
+                <strong>{{
+                  product.costCents === null ? 'Sin registrar' : money(product.costCents)
+                }}</strong>
+              </p>
+              <p class="stock-label" [class.no-stock]="product.stock === 0">
+                Stock: <strong>{{ product.stock }} unidad(es)</strong>
+              </p>
+              <div class="kiosk-actions">
+                <button
+                  class="button button-outline"
+                  [disabled]="busy()"
+                  (click)="openProduct(product)"
+                >
+                  Editar producto</button
+                ><button
+                  class="button button-primary"
+                  [disabled]="busy() || !product.active"
+                  (click)="openAction(product, 'restock')"
+                >
+                  <gg-icon name="plus" /> Reponer stock
+                </button>
+              </div>
+            </article>
+          }
+        } @empty {
+          <p class="panel kiosk-empty">No hay productos que coincidan con esta búsqueda.</p>
+        }
+      </div>
+    }
+  }
+</section>

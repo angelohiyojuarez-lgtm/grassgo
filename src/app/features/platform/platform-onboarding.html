@@ -1,0 +1,134 @@
+<section class="onboarding panel" aria-labelledby="onboarding-title">
+  <div class="step-progress" aria-label="Pasos del registro">
+    <span [class.current]="step() === 1">1. Negocio y dueño</span>
+    <span [class.current]="step() === 2">2. Canchas y precios</span>
+  </div>
+  <h2 id="onboarding-title">
+    {{ step() === 1 ? 'Empecemos por el negocio' : 'Añade sus canchas y precios' }}
+  </h2>
+  <p class="intro">
+    Un negocio puede tener canchas de fútbol y vóley. Registra el deporte y los precios de cada una;
+    el dueño completará los horarios y el QR antes de publicar.
+  </p>
+  @if (error()) {
+    <p class="notice notice-error" role="alert">{{ error() }}</p>
+  }
+  @if (step() === 1) {
+    <form (ngSubmit)="next()" class="business-fields">
+      <label
+        >Nombre del negocio<input
+          name="name"
+          [(ngModel)]="name"
+          required
+          minlength="2"
+          maxlength="100"
+          autocomplete="organization"
+          placeholder="Nombre del establecimiento"
+      /></label>
+      <label
+        >Ubicación<input
+          name="location"
+          [(ngModel)]="location"
+          required
+          minlength="2"
+          maxlength="200"
+          placeholder="Distrito, dirección o referencia de ubicación"
+      /></label>
+      <label
+        >Correo del dueño<input
+          name="ownerEmail"
+          [(ngModel)]="ownerEmail"
+          type="email"
+          required
+          maxlength="254"
+          autocomplete="email"
+          placeholder="Correo de su cuenta en GrassGo"
+        /><small
+          >La invitación aparecerá dentro de GrassGo. El dueño debe verificar su correo para
+          aceptarla.</small
+        ></label
+      >
+      <label
+        >Adelanto por reserva (S/)<input
+          name="advance"
+          [(ngModel)]="advance"
+          inputmode="decimal"
+          required
+          maxlength="8"
+          placeholder="Escribe el monto acordado"
+        /><small>Se paga al negocio con su QR y se verifica manualmente.</small></label
+      >
+      <div class="form-actions">
+        <a class="button button-secondary" routerLink="/superadmin/negocios">Volver a negocios</a
+        ><button class="button button-primary" type="submit">Continuar a las canchas →</button>
+      </div>
+    </form>
+  } @else {
+    <form (ngSubmit)="save()" class="courts-form">
+      <p class="court-count">{{ courts().length }} cancha(s) en este establecimiento</p>
+      @for (court of courts(); track court.id; let index = $index) {
+        <fieldset class="court-card">
+          <legend>Cancha {{ index + 1 }}{{ court.sport ? ' — ' + court.sport : '' }}</legend>
+          <div class="court-card-heading">
+            <p>{{ court.name || 'Completa los datos de esta cancha' }}</p>
+            @if (court.id !== 'principal') {
+              <button
+                class="remove-court"
+                type="button"
+                (click)="removeCourt(court.id)"
+                [disabled]="busy() || registrationStarted()"
+              >
+                Quitar borrador
+              </button>
+            }
+          </div>
+          <gg-platform-court-fields [draft]="court" [disabled]="busy() || registrationStarted()" />
+        </fieldset>
+      }
+      <button
+        class="button button-outline add-court"
+        type="button"
+        (click)="addCourt()"
+        [disabled]="busy() || registrationStarted() || courts().length >= maxCourts"
+      >
+        + Añadir otra cancha
+      </button>
+      @if (courts().length >= maxCourts) {
+        <p class="court-count">Este registro admite hasta {{ maxCourts }} canchas.</p>
+      }
+      @if (registrationStarted() && error()) {
+        <p class="preparation-note">
+          Conservamos los datos de este intento. Pulsa Reintentar guardado para continuar sin
+          duplicar el negocio ni las canchas. Después podrás editar sus precios desde la ficha del
+          negocio.
+        </p>
+      }
+      <div class="preparation-note">
+        <strong>Quedará en preparación.</strong
+        ><span
+          >Cada cancha tendrá su propia disponibilidad. El dueño también podrá cambiar estos
+          precios. Las reservas se habilitarán cuando estén listos los horarios y los datos de pago,
+          y publiques el negocio.</span
+        >
+      </div>
+      <div class="form-actions">
+        <button
+          type="button"
+          class="button button-secondary"
+          (click)="back()"
+          [disabled]="busy() || registrationStarted()"
+        >
+          ← Revisar datos</button
+        ><button type="submit" class="button button-primary" [disabled]="busy()">
+          {{
+            busy()
+              ? 'Guardando negocio y canchas…'
+              : registrationStarted()
+                ? 'Reintentar guardado'
+                : 'Crear negocio y sus canchas'
+          }}
+        </button>
+      </div>
+    </form>
+  }
+</section>

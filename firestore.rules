@@ -1,0 +1,1459 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Modelo de esta entrega:
+    // profiles/{uid}: uid string inmutable; displayName string 2..80;
+    // phone string 0..20; createdAt timestamp inmutable; updatedAt timestamp.
+    // platform_roles/{uid}: role superadmin, status active/suspended; servidor escribe.
+    // users/{uid}/memberships/{id}: índice de asignaciones; servidor escribe.
+    // establishments/{id}: tenant con status approved/published/suspended.
+    // establishments/{id}/members/{uid}: role admin, status active/suspended;
+    // autorización canónica, servidor escribe. No perfiles privados aquí.
+    // establishments/{id}/courts/{id}: datos de cancha, servidor escribe por ahora.
+    // catalog/{id}: presentación pública; solo proyecciones de configuración
+    // autorizadas y servidor pueden actualizar campos expresamente permitidos.
+    // catalog/{id}/courts/{id}: proyección pública del horario/tarifas de la cancha.
+    // settings/schedule privado y campos horarios del catálogo: semana canónica.
+    // closures/{fecha}: cierre solo para solicitudes nuevas; motivo/autor privados.
+    // Cada cambio conserva una revisión inmutable y sincroniza su proyección.
+    // settings/contact: phone string 0..20, description 0..1000, reference 0..300.
+    // settings/payment: mode live, methods únicos Yape/Plin 1..2, recipient 2..100,
+    // phone 8..20, qr payment-qrs/{local}/{id}; revisión, autor y reloj de servidor.
+    // Ambos ajustes tienen history/{revision} privado, inmutable y atómico.
+    // catalog/{id}/paymentQrs/{qrId}: JPEG dataURL 32..420000 caracteres,
+    // width/height enteros 64..1600, sha256 hex64; cada versión es inmutable.
+    // El QR se crea junto a sus datos de pago; nunca se copia al listado de locales.
+    // courts/{court}/settings/pricing: importes enteros 1000..1000000 céntimos,
+    // nightStartsAt 0..23, revisión/autor/reloj servidor e historial inmutable.
+    // Cinco escrituras sincronizan canónico, cancha privada/pública, tarjeta e historia.
+    // El índice courts[] guarda certificado pricingRevision + pricingConfirmed:true;
+    // pricingUpdatedAt de servidor permanece fuera del array. Solo un precio
+    // canónico validado puede certificar una entrada. El alta añade 1..20 canchas
+    // con seis escrituras por cancha, sin mezclar bloqueos entre sus deportes.
+    // courts/{court}/operations/current: un partido activo global por cancha;
+    // activeReservationId/activeDate/actualStartAt null al finalizar, lastEndedAt
+    // conserva inicio real+1h. Reloj servidor, revisión e historial privados;
+    // proyección pública sin autor ni identidad del cliente. Vence tras 1h aunque
+    // nadie abra el panel; el cierre se persiste después con ese límite exacto.
+    // direct_requests/{id}: solicitud privada. Identidad, horario, importe y snapshot
+    // de pago son inmutables; createdAt/proofSubmittedAt/reviewedAt usan request.time.
+    // direct_slots/{local}/courts/{cancha}/days/{fecha}/hours/{hora}:
+    // reservationId string, lockedAt timestamp inmutable, status held/confirmed/released.
+    // direct_proofs/{id}: imagen JPEG dataURL <=700000 caracteres; propietario,
+    // local, reservationId, contentType, sha256 y createdAt; un comprobante inmutable.
+    // direct_limits/{uid}/days/{fecha}: count int 1..20, lastRequestId string,
+    // updatedAt timestamp de servidor. Conserva el límite técnico del motor previo.
+    // Los clientes nunca conceden roles ni verifican pagos. El administrador debe
+    // declarar el ingreso real; una imagen por sí sola solo solicita revisión.
+    // Superadmin directo: un cambio approved/suspended modifica solo estado,
+    // enabled:false y platformStatusChangeId/UpdatedAt/UpdatedBy. Se replica en
+    // catalog (draft/suspended si existe) con audit_logs/{UUID} nuevo e inmutable.
+    // No publica, no activa reservas, no asigna roles ni modifica pagos/precios.
+    // establishment_invitations/{UUID}: local/nombre, targetEmail normalizado
+    // 5..254, pending/accepted, createdBy/At; acceptedBy/At solo al aceptar con
+    // ese correo verificado, sin dueño anterior y con membresía e índice nuevos.
+    // lifecycleChangeId UUID y lifecycleUpdatedAt/By enlazan altas/publicación
+    // con audit_logs inmutable. El alta no inventa precios ni horarios.
+    // audit_logs: estados/alta/aceptación/publicación y business_setting_changed
+    // con kind/referenceId/revision, sin copiar before/after ni imágenes privadas.
+    // direct_slots.reviewPending bool opcional: solo señala comprobante enviado;
+    // no acredita dinero y se limpia al revisar. Adelanto por local, no universal.
+    // kiosk_products/{UUID}: nombre 2..100, categoría 0..40, precio 1..1000000,
+    // costo null o 0..1000000, stock 0..1000000, active, revisión/autor/reloj.
+    // photo opcional: null o JPEG dataURL 32..180000 caracteres, sin URL externa.
+    // Se conserva al vender/reponer y nunca se copia a snapshots del historial.
+    // lastMovementId UUID nuevo enlaza cada alta/edición/reposición/venta con
+    // kiosk_movements/{UUID} inmutable. Solo venta cobrada genera total/profit;
+    // el costo desconocido conserva costos/ganancia null, nunca se supone cero.
+    // court_income/{reservationId}: snapshot sin cliente ni comprobante, derivado
+    // del adelanto confirmado; saldo completo una sola vez, con autor y reloj.
+
+    function authenticated() { return request.auth != null; }
+    function owner(uid) { return authenticated() && request.auth.uid == uid; }
+    function superadmin() {
+      return authenticated()
+        && get(/databases/$(database)/documents/platform_roles/$(request.auth.uid)).data.role == 'superadmin'
+        && get(/databases/$(database)/documents/platform_roles/$(request.auth.uid)).data.status == 'active';
+    }
+    function validPlatformStatusMetadata(d) {
+      return d.keys().hasAll(['status','platformStatusChangeId','platformStatusUpdatedAt','platformStatusUpdatedBy'])
+        && d.platformStatusChangeId is string
+        && d.platformStatusChangeId.matches('^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$')
+        && d.platformStatusUpdatedAt is timestamp && d.platformStatusUpdatedAt == request.time
+        && d.platformStatusUpdatedBy is string && d.platformStatusUpdatedBy == request.auth.uid;
+    }
+    function validPlatformVenueStatus(previous, current) {
+      return validPlatformStatusMetadata(current)
+        && previous.status in ['draft','pending','approved','published','suspended']
+        && current.status in ['approved','suspended'] && current.status != previous.status
+        && current.diff(previous).affectedKeys().hasOnly(['status','bookingPolicy','platformStatusChangeId','platformStatusUpdatedAt','platformStatusUpdatedBy'])
+        && current.bookingPolicy is map && current.bookingPolicy.enabled == false
+        && current.bookingPolicy.diff(previous.get('bookingPolicy', {})).affectedKeys().hasOnly(['enabled']);
+    }
+    function platformStatusEvent(id, previous, current) {
+      let published = exists(/databases/$(database)/documents/catalog/$(id));
+      return {
+        'action': 'establishment_status_changed', 'establishmentId': id,
+        'actorUid': request.auth.uid, 'at': request.time,
+        'status': current.status, 'previousStatus': previous.status,
+        'publicationStatus': published ? (current.status == 'suspended' ? 'suspended' : 'draft') : 'missing'
+      };
+    }
+    function validPlatformCatalogStatus(previous, current, venue) {
+      return validPlatformStatusMetadata(current)
+        && current.diff(previous).affectedKeys().hasOnly(['status','booking','platformStatusChangeId','platformStatusUpdatedAt','platformStatusUpdatedBy'])
+        && current.status == (venue.status == 'suspended' ? 'suspended' : 'draft')
+        && current.booking is map && current.booking.enabled == false
+        && current.booking.diff(previous.get('booking', {})).affectedKeys().hasOnly(['enabled'])
+        && current.platformStatusChangeId == venue.platformStatusChangeId
+        && current.platformStatusUpdatedAt == venue.platformStatusUpdatedAt
+        && current.platformStatusUpdatedBy == venue.platformStatusUpdatedBy;
+    }
+    function linkedPlatformStatusChange(id, previous, current) {
+      let auditPath = /databases/$(database)/documents/audit_logs/$(current.platformStatusChangeId);
+      let catalogPath = /databases/$(database)/documents/catalog/$(id);
+      return validPlatformVenueStatus(previous, current)
+        && !exists(auditPath)
+        && getAfter(auditPath).data == platformStatusEvent(id, previous, current)
+        && (!exists(catalogPath) || validPlatformCatalogStatus(get(catalogPath).data, getAfter(catalogPath).data, current));
+    }
+    // Alta conectada: un dueño acepta con su correo verificado; publicar exige
+    // configuración real del piloto de una cancha. Los roles globales no se crean.
+    function lifecycleUuid(id) {
+      return id is string && id.matches('^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$');
+    }
+    function lifecycleMetadata(d) {
+      return lifecycleUuid(d.lifecycleChangeId) && d.lifecycleUpdatedAt == request.time
+        && d.lifecycleUpdatedBy == request.auth.uid;
+    }
+    function lifecycleEvent(id, action, status, publication) {
+      return {'action': action, 'establishmentId': id, 'actorUid': request.auth.uid,
+        'at': request.time, 'status': status, 'publicationStatus': publication};
+    }
+    function lifecycleAuditMatches(id, d, action, status, publication) {
+      return getAfter(/databases/$(database)/documents/audit_logs/$(d.lifecycleChangeId)).data
+        == lifecycleEvent(id, action, status, publication);
+    }
+    function initialVenue(d, id) {
+      return d.keys().hasAll(['name','location','status','bookingEngine','bookingPolicy','ownerInvitationId','createdBy','createdAt','lifecycleChangeId','lifecycleUpdatedAt','lifecycleUpdatedBy'])
+        && d.keys().hasOnly(['name','location','status','bookingEngine','bookingPolicy','ownerInvitationId','createdBy','createdAt','lifecycleChangeId','lifecycleUpdatedAt','lifecycleUpdatedBy'])
+        && lifecycleUuid(id) && lifecycleMetadata(d) && d.lifecycleChangeId == id && d.ownerInvitationId == id
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 100
+        && d.location is string && d.location.size() >= 2 && d.location.size() <= 200
+        && d.status == 'approved' && d.bookingEngine == 'direct'
+        && d.bookingPolicy.keys().hasAll(['enabled','advanceCents','holdMinutes'])
+        && d.bookingPolicy.keys().hasOnly(['enabled','advanceCents','holdMinutes'])
+        && d.bookingPolicy.enabled == false && d.bookingPolicy.holdMinutes == 15
+        && d.bookingPolicy.advanceCents is int && d.bookingPolicy.advanceCents >= 1 && d.bookingPolicy.advanceCents <= 1000000
+        && d.createdBy == request.auth.uid && d.createdAt == request.time;
+    }
+    function initialCourt(d) {
+      return d.keys().hasAll(['name','sport','surface','images','dayPriceCents','nightPriceCents','nightStartsAt','status','maintenance','runtime'])
+        && d.keys().hasOnly(['name','sport','surface','images','dayPriceCents','nightPriceCents','nightStartsAt','status','maintenance','runtime'])
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 100
+        && d.sport is string && d.sport.size() >= 2 && d.sport.size() <= 50
+        && d.surface is string && d.surface.size() >= 2 && d.surface.size() <= 80
+        && d.images is list && d.images.size() == 0
+        && d.dayPriceCents == null && d.nightPriceCents == null && d.nightStartsAt == null
+        && d.status == 'active' && d.maintenance == false && d.runtime == null;
+    }
+    function initialCourtCard(c) {
+      return {'id':'principal','name':c.name,'sport':c.sport,'surface':c.surface,'images':[],
+        'dayPriceCents':null,'nightPriceCents':null,'nightStartsAt':null};
+    }
+    function initialCatalog(p, v) {
+      return p.keys().hasAll(['name','location','status','description','reference','district','phone','images','courts','advanceCents','booking','lifecycleChangeId','lifecycleUpdatedAt','lifecycleUpdatedBy'])
+        && p.keys().hasOnly(['name','location','status','description','reference','district','phone','images','courts','advanceCents','booking','lifecycleChangeId','lifecycleUpdatedAt','lifecycleUpdatedBy'])
+        && lifecycleMetadata(p) && p.lifecycleChangeId == v.lifecycleChangeId
+        && p.name == v.name && p.location == v.location && p.status == 'draft'
+        && p.description == '' && p.reference == '' && p.district == '' && p.phone == ''
+        && p.images == [] && p.courts == [] && p.advanceCents == v.bookingPolicy.advanceCents
+        && p.booking == {'engine':'direct','enabled':false,'holdMinutes':15};
+    }
+    function ownInvitationEmail(d) {
+      return authenticated() && request.auth.token.get('email', '') is string
+        && d.targetEmail == request.auth.token.get('email', '').lower();
+    }
+    function initialInvitation(d, id, v) {
+      return d.keys().hasAll(['establishmentId','establishmentName','targetEmail','status','createdBy','createdAt'])
+        && d.keys().hasOnly(['establishmentId','establishmentName','targetEmail','status','createdBy','createdAt'])
+        && d.establishmentId == id && d.establishmentName == v.name
+        && d.targetEmail is string && d.targetEmail.size() >= 5 && d.targetEmail.size() <= 254
+        && d.targetEmail == d.targetEmail.lower() && d.targetEmail.matches('^[^ @]+@[^ @]+[.][^ @]+$')
+        && d.status == 'pending' && d.createdBy == request.auth.uid && d.createdAt == request.time;
+    }
+    function newVenueInCommit(id) {
+      let path = /databases/$(database)/documents/establishments/$(id);
+      return !exists(path) && initialVenue(getAfter(path).data, id);
+    }
+    function createsConnectedVenue(id, d) {
+      return initialVenue(d, id)
+        && initialCatalog(getAfter(/databases/$(database)/documents/catalog/$(id)).data, d)
+        && initialInvitation(getAfter(/databases/$(database)/documents/establishment_invitations/$(id)).data, id, d)
+        && lifecycleAuditMatches(id, d, 'establishment_created', 'approved', 'draft');
+    }
+    function acceptsOwnerChange(id, previous, current) {
+      return !previous.keys().hasAny(['managedAdminUid']) && previous.status == 'approved'
+        && previous.bookingEngine == 'direct' && previous.bookingPolicy.enabled == false
+        && current.diff(previous).affectedKeys().hasOnly(['managedAdminUid','lifecycleChangeId','lifecycleUpdatedAt','lifecycleUpdatedBy'])
+        && current.managedAdminUid == request.auth.uid && lifecycleMetadata(current)
+        && current.lifecycleChangeId != previous.get('lifecycleChangeId', '');
+    }
+    function ownerChangeInCommit(id) {
+      let path = /databases/$(database)/documents/establishments/$(id);
+      return exists(path) && request.auth.token.get('email_verified', false) == true
+        && acceptsOwnerChange(id, get(path).data, getAfter(path).data);
+    }
+    function acceptedInvitation(previous, current) {
+      return ownInvitationEmail(previous) && request.auth.token.get('email_verified', false) == true
+        && previous.status == 'pending' && current.status == 'accepted'
+        && current.diff(previous).affectedKeys().hasOnly(['status','acceptedAt','acceptedBy'])
+        && current.acceptedBy == request.auth.uid && current.acceptedAt == request.time;
+    }
+    function acceptsConnectedOwner(id, previous, current) {
+      let invitation = /databases/$(database)/documents/establishment_invitations/$(previous.ownerInvitationId);
+      let member = /databases/$(database)/documents/establishments/$(id)/members/$(request.auth.uid);
+      let index = /databases/$(database)/documents/users/$(request.auth.uid)/memberships/$(id);
+      let p = get(/databases/$(database)/documents/catalog/$(id)).data;
+      return acceptsOwnerChange(id, previous, current) && request.auth.token.get('email_verified', false) == true
+        && previous.ownerInvitationId == id && get(invitation).data.establishmentId == id
+        && get(invitation).data.establishmentName == previous.name
+        && acceptedInvitation(get(invitation).data, getAfter(invitation).data)
+        && p.status == 'draft' && p.booking.enabled == false
+        && !exists(member) && getAfter(member).data == {'role':'admin','status':'active'}
+        && !exists(index) && getAfter(index).data == {'name': previous.name,'role':'admin','status':'active'}
+        && lifecycleAuditMatches(id, current, 'owner_invitation_accepted', 'approved', 'draft');
+    }
+    function publishChange(previous, current) {
+      return previous.status in ['approved','published'] && previous.bookingEngine == 'direct'
+        && previous.bookingPolicy.enabled == false && current.status == 'published'
+        && current.diff(previous).affectedKeys().hasOnly(['status','bookingPolicy','lifecycleChangeId','lifecycleUpdatedAt','lifecycleUpdatedBy'])
+        && lifecycleMetadata(current) && current.lifecycleChangeId != previous.get('lifecycleChangeId','')
+        && current.bookingPolicy.enabled == true && current.bookingPolicy.holdMinutes == 15
+        && previous.bookingPolicy.get('holdMinutes', 15) == 15
+        && current.bookingPolicy.diff(previous.bookingPolicy).affectedKeys().hasOnly(['enabled','holdMinutes','advanceCents']);
+    }
+    function publishChangeInCommit(id) {
+      let path = /databases/$(database)/documents/establishments/$(id);
+      let previous = get(path).data;
+      let current = getAfter(path).data;
+      // Solo la rama privada de publicación puede pasar enabled false -> true.
+      // Las tres escrituras coordinadas validan dueño, horarios, certificados,
+      // pago y QR; ninguna publicación puede omitir uno de esos controles.
+      return previous.bookingPolicy.enabled == false && current.bookingPolicy.enabled == true
+        && current.status == 'published' && current.lifecycleChangeId != previous.get('lifecycleChangeId', '');
+    }
+    function readyWeekly(w, p, id) {
+      return w.establishmentId == id && validWeekdays(w.days) && w.days.size() >= 1
+        && w.openHour is int && w.openHour >= 0 && w.openHour <= 23
+        && w.closeHour is int && w.closeHour > w.openHour && w.closeHour <= 24
+        && w.revision is int && w.revision >= 1 && scheduleProjectionMatches(w, p);
+    }
+    function readyPayment(w, p, id) {
+      return w.establishmentId == id && w.mode == 'live' && w.revision is int && w.revision >= 1
+        && w.qr is string && w.qr.size() <= 175 && w.qr.matches('^payment-qrs/' + id + '/[A-Za-z0-9-]{1,80}$')
+        && w.methods is list && w.methods.size() >= 1 && w.methods.size() <= 2
+        && w.methods.hasOnly(['Yape','Plin']) && w.methods.toSet().size() == w.methods.size()
+        && w.recipient is string && w.recipient.size() >= 2 && w.recipient.size() <= 100
+        && w.phone is string && w.phone.size() >= 8 && w.phone.size() <= 20 && w.phone.matches('^[+]?[0-9][0-9 ()-]{7,19}$')
+        && paymentProjectionMatches(w, p) && paymentHasQr(w, id);
+    }
+    function validPublishedCertificate(c, advance) {
+      // El alta y cada cambio de precio certifican este índice atómicamente con
+      // el canónico tipado y acotado. No se repiten sus validadores de tipos:
+      // una entrada sin esa procedencia no puede obtener pricingConfirmed.
+      return c.pricingConfirmed == true && c.pricingRevision >= 1
+        && c.dayPriceCents >= advance && c.nightPriceCents >= advance;
+    }
+    function validPublishedCourts(c, advance) {
+      let count = c.size();
+      return c is list && count >= 1 && count <= 20
+        && validPublishedCertificate(c[0], advance)
+        && (count < 2 || validPublishedCertificate(c[1], advance))
+        && (count < 3 || validPublishedCertificate(c[2], advance))
+        && (count < 4 || validPublishedCertificate(c[3], advance))
+        && (count < 5 || validPublishedCertificate(c[4], advance))
+        && (count < 6 || validPublishedCertificate(c[5], advance))
+        && (count < 7 || validPublishedCertificate(c[6], advance))
+        && (count < 8 || validPublishedCertificate(c[7], advance))
+        && (count < 9 || validPublishedCertificate(c[8], advance))
+        && (count < 10 || validPublishedCertificate(c[9], advance));
+    }
+    function validPublishedCourtsTail(c, advance) {
+      let count = c.size();
+      // La escritura privada valida 1..10; la auditoría nueva valida 11..20.
+      // Ambas escrituras son obligatorias y observan el mismo catálogo inmutable.
+      return c is list && count >= 1 && count <= 20
+        && (count < 11 || validPublishedCertificate(c[10], advance))
+        && (count < 12 || validPublishedCertificate(c[11], advance))
+        && (count < 13 || validPublishedCertificate(c[12], advance))
+        && (count < 14 || validPublishedCertificate(c[13], advance))
+        && (count < 15 || validPublishedCertificate(c[14], advance))
+        && (count < 16 || validPublishedCertificate(c[15], advance))
+        && (count < 17 || validPublishedCertificate(c[16], advance))
+        && (count < 18 || validPublishedCertificate(c[17], advance))
+        && (count < 19 || validPublishedCertificate(c[18], advance))
+        && (count < 20 || validPublishedCertificate(c[19], advance));
+    }
+    function publishedCatalogChange(previous, current, venue) {
+      return current.diff(previous).affectedKeys().hasOnly(['status','booking','lifecycleChangeId','lifecycleUpdatedAt','lifecycleUpdatedBy'])
+        && lifecycleMetadata(current) && current.lifecycleChangeId == venue.lifecycleChangeId
+        && current.lifecycleChangeId != previous.get('lifecycleChangeId', '')
+        && current.status == 'published' && current.booking.enabled == true && current.booking.engine == 'direct'
+        && current.booking.holdMinutes == 15
+        && previous.get('booking', {}).get('holdMinutes', 15) == 15
+        && current.booking.diff(previous.get('booking', {})).affectedKeys().hasOnly(['enabled','engine','holdMinutes']);
+    }
+    function publishesConnectedVenue(id, previous, current) {
+      let path = /databases/$(database)/documents/catalog/$(id);
+      let p = getAfter(path).data;
+      let member = get(/databases/$(database)/documents/establishments/$(id)/members/$(current.managedAdminUid)).data;
+      // El UUID nuevo obliga a escribir el catálogo. Su regla valida los datos
+      // de pago y el QR; dividir los controles evita el límite de expresiones.
+      return publishChange(previous, current)
+        && p.lifecycleChangeId == current.lifecycleChangeId && p.lifecycleChangeId != get(path).data.get('lifecycleChangeId', '')
+        && p.lifecycleUpdatedAt == request.time && p.status == 'published' && p.booking.enabled == true
+        && member.role == 'admin' && member.status == 'active'
+        && current.bookingPolicy.holdMinutes == 15 && p.advanceCents == current.bookingPolicy.advanceCents
+        // Solo se completa un adelanto privado ausente desde el importe público
+        // ya guardado. El catálogo conserva ese importe durante la publicación.
+        && current.bookingPolicy.advanceCents == previous.bookingPolicy.get('advanceCents', p.advanceCents)
+        && current.bookingPolicy.advanceCents is int && current.bookingPolicy.advanceCents >= 1 && current.bookingPolicy.advanceCents <= 1000000
+        && validPublishedCourts(p.courts, current.bookingPolicy.advanceCents)
+        && readyWeekly(get(/databases/$(database)/documents/establishments/$(id)/settings/schedule).data, p, id)
+        && !exists(/databases/$(database)/documents/audit_logs/$(current.lifecycleChangeId))
+        && lifecycleAuditMatches(id, current, 'business_published', 'published', 'published');
+    }
+    function activeMember(id) {
+      return authenticated()
+        && exists(/databases/$(database)/documents/establishments/$(id))
+        && get(/databases/$(database)/documents/establishments/$(id)).data.status in ['approved', 'published']
+        && get(/databases/$(database)/documents/establishments/$(id)/members/$(request.auth.uid)).data.role == 'admin'
+        && get(/databases/$(database)/documents/establishments/$(id)/members/$(request.auth.uid)).data.status == 'active';
+    }
+    function validProfile(data, uid) {
+      return data.keys().hasAll(['uid', 'displayName', 'phone', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'phone', 'createdAt', 'updatedAt'])
+        && data.uid is string && data.uid == uid && data.uid.size() <= 128
+        && data.displayName is string && data.displayName.size() >= 2 && data.displayName.size() <= 80
+        && data.displayName.matches('.*[^ ].*')
+        && data.phone is string && data.phone.size() <= 20 && data.phone.matches('^[+0-9 ()-]{0,20}$')
+        && data.createdAt is timestamp && data.updatedAt is timestamp;
+    }
+    function managesSchedule(id) {
+      return activeMember(id)
+        && get(/databases/$(database)/documents/establishments/$(id)).data.bookingEngine == 'direct';
+    }
+    function managesPricing(id) {
+      let venue = get(/databases/$(database)/documents/establishments/$(id)).data;
+      return authenticated() && (activeMember(id) || superadmin()) && venue.bookingEngine == 'direct'
+        && venue.status in ['draft','pending','approved','published','suspended'];
+    }
+    // El quiosco tiene permisos propios: no se amplían los de horarios o pagos.
+    function readsKiosk(id) {
+      let venue = get(/databases/$(database)/documents/establishments/$(id)).data;
+      return authenticated() && venue.bookingEngine == 'direct' && (activeMember(id) || superadmin());
+    }
+    function managesKiosk(id) {
+      let venue = get(/databases/$(database)/documents/establishments/$(id)).data;
+      return readsKiosk(id) && venue.status in ['approved','published'];
+    }
+    function validKioskPhoto(photo) {
+      return photo == null || (photo is string && photo.size() >= 32 && photo.size() <= 180000
+        && photo.matches('^data:image/jpeg;base64,/9j/[A-Za-z0-9+/]+={0,2}$'));
+    }
+    function validKioskProduct(d) {
+      return d.keys().hasAll(['name','category','priceCents','costCents','stock','active','revision','createdAt','createdBy','updatedAt','updatedBy','lastMovementId'])
+        && d.keys().hasOnly(['name','category','priceCents','costCents','stock','active','revision','createdAt','createdBy','updatedAt','updatedBy','lastMovementId','photo'])
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 100 && d.name.matches('.*[^ ].*')
+        && d.category is string && d.category.size() <= 40
+        && d.priceCents is int && d.priceCents >= 1 && d.priceCents <= 1000000
+        && (d.costCents == null || (d.costCents is int && d.costCents >= 0 && d.costCents <= 1000000))
+        && d.stock is int && d.stock >= 0 && d.stock <= 1000000 && d.active is bool
+        && validKioskPhoto(d.get('photo', null))
+        && d.revision is int && d.revision >= 1 && d.revision <= 1000000000
+        && d.createdAt is timestamp && d.createdBy is string && d.createdBy.size() >= 1 && d.createdBy.size() <= 128
+        && d.updatedAt == request.time && d.updatedBy == request.auth.uid && lifecycleUuid(d.lastMovementId);
+    }
+    function kioskSnapshot(d) {
+      return {'name':d.name,'category':d.category,'priceCents':d.priceCents,'costCents':d.costCents,'active':d.active};
+    }
+    function validKioskMovement(m, productId, current) {
+      return m.keys().hasAll(['productId','kind','quantity','stockBefore','stockAfter','productSnapshot','totalCents','costTotalCents','profitCents','paymentMethod','paymentReceived','revision','actorUid','at'])
+        && m.keys().hasOnly(['productId','kind','quantity','stockBefore','stockAfter','productSnapshot','totalCents','costTotalCents','profitCents','paymentMethod','paymentReceived','revision','actorUid','at'])
+        && m.productId == productId && m.kind in ['create','edit','restock','sale']
+        && m.quantity is int && m.quantity >= 0 && m.quantity <= 1000000
+        && m.stockAfter == current.stock && m.revision == current.revision
+        && m.actorUid == request.auth.uid && m.at == request.time;
+    }
+    function kioskNonSale(m) {
+      return m.totalCents == 0 && m.costTotalCents == null && m.profitCents == null
+        && m.paymentMethod == null && m.paymentReceived == false;
+    }
+    function kioskMoneySale(m, previous) {
+      let total = previous.priceCents * m.quantity;
+      let cost = previous.costCents == null ? null : previous.costCents * m.quantity;
+      return m.totalCents == total && m.costTotalCents == cost
+        && m.profitCents == (cost == null ? null : total - cost)
+        && m.paymentMethod in ['cash','yape','plin'] && m.paymentReceived == true;
+    }
+    function kioskStockChange(previous, current) {
+      return current.diff(previous).affectedKeys().hasOnly(['stock','revision','updatedAt','updatedBy','lastMovementId']);
+    }
+    function linkedKioskOperation(id, productId, previous, current) {
+      let path = /databases/$(database)/documents/establishments/$(id)/kiosk_movements/$(current.lastMovementId);
+      let movement = getAfter(path).data;
+      return !exists(path) && validKioskMovement(movement, productId, current)
+        && (previous == null
+          ? (movement.kind == 'create' && current.revision == 1 && current.createdAt == request.time && current.createdBy == request.auth.uid
+            && movement.quantity == current.stock && movement.stockBefore == 0
+            && movement.productSnapshot == kioskSnapshot(current) && kioskNonSale(movement))
+          : (current.createdAt == previous.createdAt && current.createdBy == previous.createdBy
+            && current.revision == previous.revision + 1 && current.lastMovementId != previous.lastMovementId
+            && movement.stockBefore == previous.stock
+            && ((movement.kind == 'edit' && movement.quantity == 0 && current.stock == previous.stock
+                && current.diff(previous).affectedKeys().hasOnly(['name','category','priceCents','costCents','active','photo','revision','updatedAt','updatedBy','lastMovementId'])
+                && movement.productSnapshot == kioskSnapshot(current) && kioskNonSale(movement))
+              || (movement.kind == 'restock' && movement.quantity >= 1 && current.stock == previous.stock + movement.quantity
+                && kioskStockChange(previous, current) && movement.productSnapshot == kioskSnapshot(previous) && kioskNonSale(movement))
+              || (movement.kind == 'sale' && movement.quantity >= 1 && previous.active == true
+                && movement.quantity <= previous.stock && current.stock == previous.stock - movement.quantity
+                && kioskStockChange(previous, current) && movement.productSnapshot == kioskSnapshot(previous) && kioskMoneySale(movement, previous)))));
+    }
+    function validKioskMovementLink(id, operationId, m) {
+      let path = /databases/$(database)/documents/establishments/$(id)/kiosk_products/$(m.productId);
+      let previous = exists(path) ? get(path).data : null;
+      let current = getAfter(path).data;
+      // Obliga a crear/actualizar el producto; esa regla valida el movimiento
+      // completo y su snapshot. Un movimiento suelto nunca constituye ingreso.
+      return lifecycleUuid(operationId) && lifecycleUuid(m.productId)
+        && current.lastMovementId == operationId && current.updatedAt == request.time && current.updatedBy == request.auth.uid
+        && (previous == null ? current.revision == 1
+          : (current.revision == previous.revision + 1 && current.lastMovementId != previous.lastMovementId));
+    }
+    function courtIncomeInitial(reservationId, source) {
+      return {'reservationId':reservationId,'courtId':source.courtId,'courtName':source.courtName,
+        'date':source.date,'hour':source.hour,'totalCents':source.totalCents,
+        'advanceCents':source.verifiedAdvanceCents,'advanceAt':source.reviewedAt,'advanceBy':source.reviewedBy,
+        'balanceCents':0,'balanceAt':null,'balanceBy':null,'balanceMethod':null};
+    }
+    function validCourtIncome(d, reservationId) {
+      return d.keys().hasAll(['reservationId','courtId','courtName','date','hour','totalCents','advanceCents','advanceAt','advanceBy','balanceCents','balanceAt','balanceBy','balanceMethod'])
+        && d.keys().hasOnly(['reservationId','courtId','courtName','date','hour','totalCents','advanceCents','advanceAt','advanceBy','balanceCents','balanceAt','balanceBy','balanceMethod'])
+        && d.reservationId == reservationId && directId(reservationId) && directId(d.courtId)
+        && d.courtName is string && d.courtName.size() >= 1 && d.courtName.size() <= 120
+        && d.date is string && d.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && d.hour is int && d.hour >= 0 && d.hour <= 23
+        && d.totalCents is int && d.totalCents >= 1000 && d.totalCents <= 100000000
+        && d.advanceCents is int && d.advanceCents >= 1 && d.advanceCents <= d.totalCents
+        && d.advanceAt is timestamp && d.advanceBy is string && d.advanceBy.size() >= 1 && d.advanceBy.size() <= 128
+        && d.balanceCents is int && d.balanceCents >= 0 && d.balanceCents <= d.totalCents - d.advanceCents
+        && (d.balanceCents == 0
+          ? (d.balanceAt == null && d.balanceBy == null && d.balanceMethod == null)
+          : (d.balanceAt is timestamp && d.balanceBy is string && d.balanceBy.size() >= 1 && d.balanceBy.size() <= 128
+            && d.balanceMethod in ['cash','yape','plin']));
+    }
+    function createsCourtIncome(id, reservationId, d) {
+      let source = getAfter(/databases/$(database)/documents/direct_requests/$(reservationId)).data;
+      return validCourtIncome(d, reservationId) && source.establishmentId == id
+        && source.status == 'confirmed' && source.paymentStatus == 'verified'
+        && d == courtIncomeInitial(reservationId, source);
+    }
+    function collectsCourtBalance(previous, current, reservationId) {
+      return validCourtIncome(current, reservationId)
+        && current.diff(previous).affectedKeys().hasOnly(['balanceCents','balanceAt','balanceBy','balanceMethod'])
+        && previous.balanceCents == 0 && previous.balanceAt == null && previous.balanceBy == null && previous.balanceMethod == null
+        && current.balanceCents == previous.totalCents - previous.advanceCents && current.balanceCents >= 1
+        && current.balanceAt == request.time && current.balanceBy == request.auth.uid
+        && current.balanceMethod in ['cash','yape','plin'];
+    }
+    function nextRevision(d, previous) {
+      return d.revision is int && d.revision >= 1
+        && (previous == null ? d.revision == 1 : d.revision == previous.revision + 1);
+    }
+    function validWeekdays(days) {
+      return days is list && days.size() <= 7 && days.hasOnly([0,1,2,3,4,5,6])
+        && days.toSet().size() == days.size()
+        && (days.size() < 1 || days[0] is int) && (days.size() < 2 || days[1] is int)
+        && (days.size() < 3 || days[2] is int) && (days.size() < 4 || days[3] is int)
+        && (days.size() < 5 || days[4] is int) && (days.size() < 6 || days[5] is int)
+        && (days.size() < 7 || days[6] is int);
+    }
+    function validSchedule(d, id) {
+      return d.keys().hasAll(['establishmentId','days','openHour','closeHour','revision','updatedAt','updatedBy'])
+        && d.keys().hasOnly(['establishmentId','days','openHour','closeHour','revision','updatedAt','updatedBy'])
+        && d.establishmentId == id && validWeekdays(d.days)
+        && d.openHour is int && d.openHour >= 0 && d.openHour <= 23
+        && d.closeHour is int && d.closeHour >= 1 && d.closeHour <= 24 && d.closeHour > d.openHour
+        && d.updatedAt is timestamp && d.updatedAt == request.time
+        && d.updatedBy == request.auth.uid;
+    }
+    function scheduleProjectionMatches(d, p) {
+      return p.days == d.days && p.openHour == d.openHour && p.closeHour == d.closeHour
+        && p.scheduleRevision == d.revision && p.scheduleUpdatedAt == d.updatedAt;
+    }
+    function closureProjection(d) {
+      return {'establishmentId': d.establishmentId, 'date': d.date, 'dateStart': d.dateStart,
+        'closed': d.closed, 'revision': d.revision, 'updatedAt': d.updatedAt};
+    }
+    function validClosureDate(d, date) {
+      let localDate = d.dateStart - duration.value(5, 'h');
+      return date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') && d.date == date
+        && localDate.year() == int(date.split('-')[0])
+        && localDate.month() == int(date.split('-')[1]) && localDate.day() == int(date.split('-')[2])
+        && localDate.hours() == 0 && localDate.minutes() == 0 && localDate.seconds() == 0 && localDate.nanos() == 0;
+    }
+    function validClosure(d, id, date) {
+      return d.keys().hasAll(['establishmentId','date','dateStart','closed','reason','revision','updatedAt','updatedBy'])
+        && d.keys().hasOnly(['establishmentId','date','dateStart','closed','reason','revision','updatedAt','updatedBy'])
+        && d.establishmentId == id && d.date is string && d.dateStart is timestamp
+        && validClosureDate(d, date) && d.closed is bool
+        && d.reason is string && d.reason.size() <= 160
+        && d.updatedAt is timestamp && d.updatedAt == request.time && d.updatedBy == request.auth.uid;
+    }
+    function historyEvent(id, kind, previous, d) {
+      return {'establishmentId': id, 'kind': kind, 'revision': d.revision,
+        'actorUid': request.auth.uid, 'at': request.time, 'before': previous, 'after': d};
+    }
+    function validHistoryEvent(e, id, kind, revision, path) {
+      let previous = exists(path) ? get(path).data : null;
+      let current = getAfter(path).data;
+      return nextRevision(current, previous) && current.updatedAt == request.time
+        && current.updatedBy == request.auth.uid && revision == string(current.revision)
+        && e == historyEvent(id, kind, previous, current);
+    }
+    function validContact(d, id) {
+      return d.keys().hasAll(['establishmentId','phone','description','reference','revision','updatedAt','updatedBy'])
+        && d.keys().hasOnly(['establishmentId','phone','description','reference','revision','updatedAt','updatedBy'])
+        && directId(id) && d.establishmentId == id
+        && d.phone is string && d.phone.size() <= 20 && d.phone.matches('^[+0-9 ()-]{0,20}$')
+        && d.description is string && d.description.size() <= 1000
+        && d.reference is string && d.reference.size() <= 300
+        && d.updatedAt is timestamp && d.updatedAt == request.time && d.updatedBy == request.auth.uid;
+    }
+    function contactProjectionMatches(d, p) {
+      return p.phone == d.phone && p.description == d.description && p.reference == d.reference
+        && p.contactRevision == d.revision && p.contactUpdatedAt == d.updatedAt;
+    }
+    function validPaymentSettings(d, id) {
+      return d.keys().hasAll(['establishmentId','mode','qr','methods','recipient','phone','revision','updatedAt','updatedBy'])
+        && d.keys().hasOnly(['establishmentId','mode','qr','methods','recipient','phone','revision','updatedAt','updatedBy'])
+        && directId(id) && d.establishmentId == id && d.mode == 'live'
+        && d.qr is string && d.qr.size() <= 175
+        && d.qr.matches('^payment-qrs/' + id + '/[A-Za-z0-9-]{1,80}$')
+        && d.methods is list && d.methods.size() >= 1 && d.methods.size() <= 2
+        && d.methods.hasOnly(['Yape','Plin']) && d.methods.toSet().size() == d.methods.size()
+        && d.recipient is string && d.recipient.size() >= 2 && d.recipient.size() <= 100
+        && d.recipient.matches('.*[^ ].*')
+        && d.phone is string && d.phone.size() >= 8 && d.phone.size() <= 20
+        && d.phone.matches('^[+]?[0-9][0-9 ()-]{7,19}$')
+        && d.updatedAt is timestamp && d.updatedAt == request.time && d.updatedBy == request.auth.uid;
+    }
+    function validPaymentQr(d, id, qrId) {
+      return d.keys().hasAll(['establishmentId','id','imageData','contentType','width','height','sha256','createdAt'])
+        && d.keys().hasOnly(['establishmentId','id','imageData','contentType','width','height','sha256','createdAt'])
+        && directId(id) && directId(qrId) && d.establishmentId == id && d.id == qrId
+        && d.contentType == 'image/jpeg' && d.imageData is string
+        && d.imageData.size() >= 32 && d.imageData.size() <= 420000
+        && d.imageData.matches('^data:image/jpeg;base64,/9j/[A-Za-z0-9+/]+={0,2}$')
+        && d.width is int && d.width >= 64 && d.width <= 1600
+        && d.height is int && d.height >= 64 && d.height <= 1600
+        && d.sha256 is string && d.sha256.matches('^[a-f0-9]{64}$')
+        && d.createdAt is timestamp;
+    }
+    function paymentHasQr(d, id) {
+      let qrId = d.qr.split('/')[2];
+      let path = /databases/$(database)/documents/catalog/$(id)/paymentQrs/$(qrId);
+      return existsAfter(path) && validPaymentQr(getAfter(path).data, id, qrId);
+    }
+    function paymentProjection(d) {
+      return {'mode': d.mode, 'qr': d.qr, 'methods': d.methods,
+        'recipient': d.recipient, 'phone': d.phone};
+    }
+    function paymentProjectionMatches(d, p) {
+      return p.booking.payment == paymentProjection(d)
+        && p.paymentRevision == d.revision && p.paymentUpdatedAt == d.updatedAt;
+    }
+    function validPricing(d, id, courtId) {
+      let advance = get(/databases/$(database)/documents/catalog/$(id)).data.advanceCents;
+      return d.keys().hasAll(['establishmentId','courtId','dayPriceCents','nightPriceCents','nightStartsAt','revision','updatedAt','updatedBy'])
+        && d.keys().hasOnly(['establishmentId','courtId','dayPriceCents','nightPriceCents','nightStartsAt','revision','updatedAt','updatedBy'])
+        && directId(id) && directId(courtId) && d.establishmentId == id && d.courtId == courtId
+        && d.dayPriceCents is int && d.dayPriceCents >= 1000 && d.dayPriceCents <= 1000000
+        && d.nightPriceCents is int && d.nightPriceCents >= 1000 && d.nightPriceCents <= 1000000
+        && d.nightStartsAt is int && d.nightStartsAt >= 0 && d.nightStartsAt <= 23
+        && advance is int && advance >= 1 && d.dayPriceCents >= advance && d.nightPriceCents >= advance
+        && d.updatedAt is timestamp && d.updatedAt == request.time && d.updatedBy == request.auth.uid;
+    }
+    function pricingValuesMatch(d, p) {
+      return p.dayPriceCents == d.dayPriceCents && p.nightPriceCents == d.nightPriceCents
+        && p.nightStartsAt == d.nightStartsAt;
+    }
+    function pricingCourtMatches(d, p) {
+      return pricingValuesMatch(d, p) && p.pricingRevision == d.revision && p.pricingUpdatedAt == d.updatedAt;
+    }
+    function updatesCourtPricing(id, courtId, before, after) {
+      let path = /databases/$(database)/documents/establishments/$(id)/courts/$(courtId)/settings/pricing;
+      let current = getAfter(path).data;
+      return before.status == 'active'
+        && after.diff(before).affectedKeys().hasOnly(['dayPriceCents','nightPriceCents','nightStartsAt','pricingRevision','pricingUpdatedAt'])
+        && nextRevision(current, exists(path) ? get(path).data : null)
+        && current.updatedAt == request.time && current.updatedBy == request.auth.uid
+        && pricingCourtMatches(current, after);
+    }
+    function pricingParentMatches(d, p, previous) {
+      let index = p.pricingCourtIndex;
+      let oldCourt = previous.courts[index];
+      let newCourt = p.courts[index];
+      return index is int && index >= 0 && index < 20
+        && p.courts is list && previous.courts is list
+        && p.courts.size() == previous.courts.size() && p.courts.size() <= 20 && index < p.courts.size()
+        && oldCourt is map && newCourt is map && oldCourt.id == d.courtId && newCourt.id == d.courtId
+        && newCourt.diff(oldCourt).affectedKeys().hasOnly(['dayPriceCents','nightPriceCents','nightStartsAt','pricingRevision','pricingConfirmed'])
+        && previous.courts.removeAll([oldCourt]) == p.courts.removeAll([newCourt])
+        && pricingValuesMatch(d, newCourt) && newCourt.pricingRevision == d.revision && newCourt.pricingConfirmed == true
+        && p.pricingCourtId == d.courtId
+        && p.pricingRevision == d.revision && p.pricingUpdatedAt == d.updatedAt;
+    }
+    function indexedCourt(c, id) {
+      return {'id':id,'name':c.name,'sport':c.sport,'surface':c.surface,'images':c.images,
+        'dayPriceCents':c.dayPriceCents,'nightPriceCents':c.nightPriceCents,'nightStartsAt':c.nightStartsAt,
+        'pricingRevision':c.pricingRevision,'pricingConfirmed':true};
+    }
+    function unusedCourtId(c, id) {
+      return (c.size() < 1 || c[0].id != id) && (c.size() < 2 || c[1].id != id)
+        && (c.size() < 3 || c[2].id != id) && (c.size() < 4 || c[3].id != id)
+        && (c.size() < 5 || c[4].id != id) && (c.size() < 6 || c[5].id != id)
+        && (c.size() < 7 || c[6].id != id) && (c.size() < 8 || c[7].id != id)
+        && (c.size() < 9 || c[8].id != id) && (c.size() < 10 || c[9].id != id)
+        && (c.size() < 11 || c[10].id != id) && (c.size() < 12 || c[11].id != id)
+        && (c.size() < 13 || c[12].id != id) && (c.size() < 14 || c[13].id != id)
+        && (c.size() < 15 || c[14].id != id) && (c.size() < 16 || c[15].id != id)
+        && (c.size() < 17 || c[16].id != id) && (c.size() < 18 || c[17].id != id)
+        && (c.size() < 19 || c[18].id != id) && (c.size() < 20 || c[19].id != id);
+    }
+    function validAddedCourt(c) {
+      return c.keys().hasAll(['name','sport','surface','images','dayPriceCents','nightPriceCents','nightStartsAt','status','maintenance','runtime','pricingRevision','pricingUpdatedAt'])
+        && c.keys().hasOnly(['name','sport','surface','images','dayPriceCents','nightPriceCents','nightStartsAt','status','maintenance','runtime','pricingRevision','pricingUpdatedAt'])
+        && c.name is string && c.name.size() >= 2 && c.name.size() <= 100
+        && c.sport is string && c.sport.size() >= 2 && c.sport.size() <= 50
+        && c.surface is string && c.surface.size() >= 2 && c.surface.size() <= 80
+        && c.images == [] && c.status == 'active' && c.maintenance == false && c.runtime == null
+        && c.pricingRevision == 1 && c.pricingUpdatedAt == request.time;
+    }
+    function addedCourtParentMatches(d, p, previous, c) {
+      return previous.courts is list && previous.courts.size() < 20
+        && p.diff(previous).affectedKeys().hasOnly(['courts','pricingCourtId','pricingCourtIndex','pricingRevision','pricingUpdatedAt','courtAdditionId','courtAdditionAt','courtAdditionBy'])
+        && p.courts == previous.courts.concat([indexedCourt(c, d.courtId)])
+        && (previous.courts.size() == 0 ? d.courtId == 'principal' : lifecycleUuid(d.courtId))
+        && unusedCourtId(previous.courts, d.courtId)
+        && p.pricingCourtId == d.courtId && p.pricingCourtIndex == previous.courts.size()
+        && p.pricingRevision == 1 && p.pricingUpdatedAt == request.time
+        && lifecycleUuid(p.courtAdditionId) && p.courtAdditionId != previous.get('courtAdditionId','')
+        && p.courtAdditionAt == request.time && p.courtAdditionBy == request.auth.uid
+        && d.revision == 1 && c.pricingRevision == 1 && c.pricingUpdatedAt == d.updatedAt && pricingValuesMatch(d, c);
+    }
+    function addedCourtPermission(id) {
+      let v = get(/databases/$(database)/documents/establishments/$(id)).data;
+      let advance = get(/databases/$(database)/documents/catalog/$(id)).data.advanceCents;
+      return superadmin() && v.bookingEngine == 'direct' && v.status in ['approved','published']
+        && advance is int && advance >= 1 && advance <= 1000000
+        && v.bookingPolicy.get('advanceCents', advance) == advance;
+    }
+    function addsConnectedCourt(id, courtId, c) {
+      let path = /databases/$(database)/documents/establishments/$(id)/courts/$(courtId)/settings/pricing;
+      let d = getAfter(path).data;
+      let parent = /databases/$(database)/documents/catalog/$(id);
+      let p = getAfter(parent).data;
+      return addedCourtPermission(id) && validAddedCourt(c) && validPricing(d, id, courtId)
+        && !exists(path) && d.revision == 1
+        && !exists(/databases/$(database)/documents/catalog/$(id)/courts/$(courtId))
+        && getAfter(/databases/$(database)/documents/catalog/$(id)/courts/$(courtId)).data == c
+        // Obliga al índice a ejecutar su propia validación de append exacto y
+        // unicidad; repartir los controles evita revalidarlos seis veces.
+        && p.pricingCourtId == courtId && p.pricingCourtIndex == get(parent).data.courts.size()
+        && lifecycleUuid(p.courtAdditionId) && p.courtAdditionId != get(parent).data.get('courtAdditionId','')
+        && getAfter(/databases/$(database)/documents/establishments/$(id)/courts/$(courtId)/settings/pricing/history/1).data
+          == historyEvent(id, 'pricing', null, d)
+        && getAfter(/databases/$(database)/documents/audit_logs/$(p.courtAdditionId)).data
+          == {'action':'business_setting_changed','establishmentId':id,'actorUid':request.auth.uid,'at':request.time,'kind':'pricing','referenceId':courtId,'revision':1};
+    }
+    function newCourtInCommit(id, courtId) {
+      let path = /databases/$(database)/documents/establishments/$(id)/courts/$(courtId);
+      let current = getAfter(path).data;
+      // La única regla que crea esta cancha ejecuta addsConnectedCourt completo.
+      return !exists(path) && current.pricingRevision == 1 && current.pricingUpdatedAt == request.time;
+    }
+    function addedCanonicalPricing(id, courtId, d) {
+      let c = getAfter(/databases/$(database)/documents/establishments/$(id)/courts/$(courtId)).data;
+      return newCourtInCommit(id, courtId)
+        && d == {'establishmentId':id,'courtId':courtId,'dayPriceCents':c.dayPriceCents,
+          'nightPriceCents':c.nightPriceCents,'nightStartsAt':c.nightStartsAt,'revision':1,
+          'updatedAt':request.time,'updatedBy':request.auth.uid};
+    }
+    function sessionPath(id, courtId) {
+      return /databases/$(database)/documents/establishments/$(id)/courts/$(courtId)/operations/current;
+    }
+    function sessionProjection(d) {
+      return {'establishmentId': d.establishmentId, 'courtId': d.courtId,
+        'activeReservationId': d.activeReservationId, 'activeDate': d.activeDate,
+        'actualStartAt': d.actualStartAt, 'lastEndedAt': d.lastEndedAt,
+        'revision': d.revision, 'updatedAt': d.updatedAt};
+    }
+    function validSession(d, id, courtId) {
+      return d.keys().hasAll(['establishmentId','courtId','activeReservationId','activeDate','actualStartAt','lastEndedAt','revision','updatedAt','updatedBy'])
+        && d.keys().hasOnly(['establishmentId','courtId','activeReservationId','activeDate','actualStartAt','lastEndedAt','revision','updatedAt','updatedBy'])
+        && d.establishmentId == id && d.courtId == courtId && directId(id) && directId(courtId)
+        && ((d.activeReservationId == null && d.activeDate == null && d.actualStartAt == null)
+          || (directId(d.activeReservationId) && d.activeDate is string && d.activeDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+            && d.actualStartAt is timestamp))
+        && (d.lastEndedAt == null || d.lastEndedAt is timestamp)
+        && d.updatedAt is timestamp && d.updatedAt == request.time && d.updatedBy == request.auth.uid;
+    }
+    function sessionRequestId(previous, current) {
+      return current.activeReservationId == null ? previous.activeReservationId : current.activeReservationId;
+    }
+    function sessionExpired(current) {
+      return current != null && current.activeReservationId != null
+        && request.time >= current.actualStartAt + duration.value(1, 'h');
+    }
+    function sessionCanStart(previous) {
+      return previous == null || previous.activeReservationId == null || sessionExpired(previous);
+    }
+    function sessionLastEnd(previous) {
+      return previous == null ? null : (previous.activeReservationId == null
+        ? previous.lastEndedAt : previous.actualStartAt + duration.value(1, 'h'));
+    }
+    function sessionHistory(id, courtId, previous, current) {
+      return {'establishmentId': id, 'courtId': courtId, 'kind': 'session', 'revision': current.revision,
+        'actorUid': request.auth.uid, 'at': request.time,
+        'action': current.activeReservationId == null ? 'finish' : 'start',
+        'reservationId': sessionRequestId(previous, current), 'before': previous, 'after': current};
+    }
+    function validSessionTransition(previous, current, id, courtId) {
+      let reservationId = sessionRequestId(previous, current);
+      let beforeBooking = get(/databases/$(database)/documents/direct_requests/$(reservationId)).data;
+      let afterBooking = getAfter(/databases/$(database)/documents/direct_requests/$(reservationId)).data;
+      let start = current.activeReservationId != null;
+      return beforeBooking.establishmentId == id && beforeBooking.courtId == courtId
+        && beforeBooking.status == 'confirmed' && beforeBooking.paymentStatus == 'verified'
+        && afterBooking.establishmentId == id && afterBooking.courtId == courtId
+        && (start
+          ? sessionCanStart(previous)
+            && get(/databases/$(database)/documents/establishments/$(id)/courts/$(courtId)).data.status == 'active'
+            && (previous == null || previous.lastEndedAt == null || request.time >= previous.lastEndedAt)
+            && beforeBooking.get('serviceStatus', '') == '' && !beforeBooking.keys().hasAny(['actualStartAt','actualEndAt'])
+            && current.activeDate == beforeBooking.date && current.actualStartAt == request.time
+            && current.lastEndedAt == sessionLastEnd(previous)
+            && afterBooking.serviceStatus == 'running' && afterBooking.actualStartAt == request.time
+          : previous != null && previous.activeReservationId != null
+            && beforeBooking.serviceStatus == 'running' && beforeBooking.actualStartAt == previous.actualStartAt
+            && request.time >= beforeBooking.actualStartAt + duration.value(1, 'h')
+            && current.lastEndedAt == beforeBooking.actualStartAt + duration.value(1, 'h') && afterBooking.serviceStatus == 'completed'
+            && afterBooking.actualStartAt == beforeBooking.actualStartAt
+            && afterBooking.actualEndAt == beforeBooking.actualStartAt + duration.value(1, 'h'));
+    }
+    function sessionAllowsRequest(d) {
+      let path = sessionPath(d.establishmentId, d.courtId);
+      let current = existsAfter(path) ? getAfter(path).data : null;
+      let dayStart = d.startsAt - duration.value(d.hour, 'h');
+      let dayEnd = dayStart + duration.value(1, 'd');
+      return current == null || ((current.lastEndedAt == null || d.startsAt >= current.lastEndedAt)
+        && (current.activeReservationId == null || !(dayEnd > current.actualStartAt
+          && (dayStart <= request.time || dayStart < current.actualStartAt + duration.value(1, 'h'))) || sessionExpired(current)));
+    }
+    match /profiles/{uid} {
+      allow read: if owner(uid);
+      allow create: if owner(uid) && validProfile(request.resource.data, uid)
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if owner(uid) && validProfile(request.resource.data, uid)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+    match /platform_roles/{uid} { allow read: if owner(uid); allow write: if false; }
+    match /users/{uid}/memberships/{id} {
+      allow read: if owner(uid);
+      allow create: if owner(uid) && ownerChangeInCommit(id)
+        && request.resource.data == {'name':getAfter(/databases/$(database)/documents/establishments/$(id)).data.name,'role':'admin','status':'active'};
+      allow update, delete: if false;
+    }
+    match /establishments/{id} {
+      allow read: if activeMember(id) || superadmin();
+      allow write: if false;
+      allow create: if superadmin() && createsConnectedVenue(id, request.resource.data);
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasAny(['managedAdminUid'])
+        && authenticated() && acceptsConnectedOwner(id, resource.data, request.resource.data);
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasAny(['lifecycleChangeId'])
+        && superadmin() && publishesConnectedVenue(id, resource.data, request.resource.data);
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasAny(['platformStatusChangeId'])
+        && superadmin()
+        && linkedPlatformStatusChange(id, resource.data, request.resource.data);
+      match /kiosk_products/{productId} {
+        allow read: if readsKiosk(id);
+        allow create: if managesKiosk(id) && lifecycleUuid(productId) && validKioskProduct(request.resource.data)
+          && linkedKioskOperation(id, productId, null, request.resource.data);
+        allow update: if managesKiosk(id) && lifecycleUuid(productId) && validKioskProduct(request.resource.data)
+          && linkedKioskOperation(id, productId, resource.data, request.resource.data);
+        allow delete: if false;
+      }
+      match /kiosk_movements/{operationId} {
+        allow read: if readsKiosk(id);
+        allow create: if managesKiosk(id) && validKioskMovementLink(id, operationId, request.resource.data);
+        allow update, delete: if false;
+      }
+      match /court_income/{reservationId} {
+        allow read: if readsKiosk(id);
+        allow create: if managesKiosk(id) && createsCourtIncome(id, reservationId, request.resource.data);
+        allow update: if managesKiosk(id) && collectsCourtBalance(resource.data, request.resource.data, reservationId);
+        allow delete: if false;
+      }
+      match /members/{uid} {
+        allow read: if (owner(uid) && activeMember(id)) || superadmin();
+        allow write: if false;
+        allow create: if owner(uid) && ownerChangeInCommit(id)
+          && request.resource.data == {'role':'admin','status':'active'};
+      }
+      match /courts/{courtId} {
+        allow read: if activeMember(id) || superadmin();
+        allow write: if false;
+        allow create: if authenticated() && addsConnectedCourt(id, courtId, request.resource.data);
+        allow update: if managesPricing(id)
+          && updatesCourtPricing(id, courtId, resource.data, request.resource.data);
+        match /settings/pricing {
+          allow read: if activeMember(id) || superadmin();
+          allow create: if authenticated() && addedCanonicalPricing(id, courtId, request.resource.data);
+          allow create, update: if exists(/databases/$(database)/documents/establishments/$(id)/courts/$(courtId))
+            && managesPricing(id)
+            && validPricing(request.resource.data, id, courtId)
+            && nextRevision(request.resource.data, resource == null ? null : resource.data)
+            && getAfter(/databases/$(database)/documents/establishments/$(id)/courts/$(courtId)).data.status == 'active'
+            && getAfter(/databases/$(database)/documents/catalog/$(id)/courts/$(courtId)).data.status == 'active'
+            && pricingCourtMatches(request.resource.data, getAfter(/databases/$(database)/documents/establishments/$(id)/courts/$(courtId)).data)
+            && pricingCourtMatches(request.resource.data, getAfter(/databases/$(database)/documents/catalog/$(id)/courts/$(courtId)).data)
+            && pricingParentMatches(request.resource.data, getAfter(/databases/$(database)/documents/catalog/$(id)).data,
+              get(/databases/$(database)/documents/catalog/$(id)).data)
+            && getAfter(/databases/$(database)/documents/establishments/$(id)/courts/$(courtId)/settings/pricing/history/$(string(request.resource.data.revision))).data
+              == historyEvent(id, 'pricing', resource == null ? null : resource.data, request.resource.data);
+          allow delete: if false;
+          match /history/{revision} {
+            allow read: if activeMember(id) || superadmin();
+            allow create: if revision == '1' && authenticated() && newCourtInCommit(id, courtId);
+            allow create: if exists(/databases/$(database)/documents/establishments/$(id)/courts/$(courtId))
+              && managesPricing(id)
+              && validHistoryEvent(request.resource.data, id, 'pricing', revision,
+                /databases/$(database)/documents/establishments/$(id)/courts/$(courtId)/settings/pricing);
+            allow update, delete: if false;
+          }
+        }
+        match /operations/current {
+          allow read: if activeMember(id) || superadmin();
+          allow create, update: if managesSchedule(id)
+            && exists(/databases/$(database)/documents/establishments/$(id)/courts/$(courtId))
+            && validSession(request.resource.data, id, courtId)
+            && nextRevision(request.resource.data, resource == null ? null : resource.data)
+            && validSessionTransition(resource == null ? null : resource.data, request.resource.data, id, courtId)
+            && getAfter(/databases/$(database)/documents/catalog/$(id)/courts/$(courtId)/operations/current).data == sessionProjection(request.resource.data)
+            && getAfter(/databases/$(database)/documents/establishments/$(id)/courts/$(courtId)/operations/current/history/$(string(request.resource.data.revision))).data
+              == sessionHistory(id, courtId, resource == null ? null : resource.data, request.resource.data);
+          allow delete: if false;
+          match /history/{revision} {
+            allow read: if activeMember(id) || superadmin();
+            function createsSessionHistory() {
+              let path = sessionPath(id, courtId);
+              let previous = exists(path) ? get(path).data : null;
+              let current = getAfter(path).data;
+              return nextRevision(current, previous) && revision == string(current.revision)
+                && current.updatedAt == request.time && current.updatedBy == request.auth.uid
+                && request.resource.data == sessionHistory(id, courtId, previous, current);
+            }
+            allow create: if managesSchedule(id) && createsSessionHistory();
+            allow update, delete: if false;
+          }
+        }
+      }
+      match /settings/contact {
+        allow read: if activeMember(id) || superadmin();
+        allow create, update: if managesSchedule(id)
+          && validContact(request.resource.data, id)
+          && nextRevision(request.resource.data, resource == null ? null : resource.data)
+          && contactProjectionMatches(request.resource.data, getAfter(/databases/$(database)/documents/catalog/$(id)).data)
+          && getAfter(/databases/$(database)/documents/establishments/$(id)/settings/contact/history/$(string(request.resource.data.revision))).data
+            == historyEvent(id, 'contact', resource == null ? null : resource.data, request.resource.data);
+        allow delete: if false;
+        match /history/{revision} {
+          allow read: if activeMember(id) || superadmin();
+          allow create: if managesSchedule(id)
+            && validHistoryEvent(request.resource.data, id, 'contact', revision,
+              /databases/$(database)/documents/establishments/$(id)/settings/contact);
+          allow update, delete: if false;
+        }
+      }
+      match /settings/payment {
+        allow read: if activeMember(id) || superadmin();
+        allow create, update: if managesSchedule(id)
+          && validPaymentSettings(request.resource.data, id) && paymentHasQr(request.resource.data, id)
+          && nextRevision(request.resource.data, resource == null ? null : resource.data)
+          && paymentProjectionMatches(request.resource.data, getAfter(/databases/$(database)/documents/catalog/$(id)).data)
+          && getAfter(/databases/$(database)/documents/establishments/$(id)/settings/payment/history/$(string(request.resource.data.revision))).data
+            == historyEvent(id, 'payment', resource == null ? null : resource.data, request.resource.data);
+        allow delete: if false;
+        match /history/{revision} {
+          allow read: if activeMember(id) || superadmin();
+          allow create: if managesSchedule(id)
+            && validHistoryEvent(request.resource.data, id, 'payment', revision,
+              /databases/$(database)/documents/establishments/$(id)/settings/payment);
+          allow update, delete: if false;
+        }
+      }
+      match /settings/schedule {
+        allow read: if activeMember(id) || superadmin();
+        allow create, update: if managesSchedule(id)
+          && validSchedule(request.resource.data, id)
+          && nextRevision(request.resource.data, resource == null ? null : resource.data)
+          && scheduleProjectionMatches(request.resource.data, getAfter(/databases/$(database)/documents/catalog/$(id)).data)
+          && getAfter(/databases/$(database)/documents/establishments/$(id)/settings/schedule/history/$(string(request.resource.data.revision))).data
+            == historyEvent(id, 'schedule', resource == null ? null : resource.data, request.resource.data);
+        allow delete: if false;
+        match /history/{revision} {
+          allow read: if activeMember(id) || superadmin();
+          allow create: if managesSchedule(id)
+            && validHistoryEvent(request.resource.data, id, 'schedule', revision,
+              /databases/$(database)/documents/establishments/$(id)/settings/schedule);
+          allow update, delete: if false;
+        }
+      }
+      match /closures/{date} {
+        allow read: if activeMember(id) || superadmin();
+        allow create, update: if managesSchedule(id)
+          && validClosure(request.resource.data, id, date)
+          && nextRevision(request.resource.data, resource == null ? null : resource.data)
+          && getAfter(/databases/$(database)/documents/catalog/$(id)/closures/$(date)).data == closureProjection(request.resource.data)
+          && getAfter(/databases/$(database)/documents/establishments/$(id)/closures/$(date)/history/$(string(request.resource.data.revision))).data
+            == historyEvent(id, 'closure', resource == null ? null : resource.data, request.resource.data);
+        allow delete: if false;
+        match /history/{revision} {
+          allow read: if activeMember(id) || superadmin();
+          allow create: if managesSchedule(id)
+            && validHistoryEvent(request.resource.data, id, 'closure', revision,
+              /databases/$(database)/documents/establishments/$(id)/closures/$(date));
+          allow update, delete: if false;
+        }
+      }
+    }
+    match /catalog/{id} {
+      allow read: if authenticated() && resource.data.status == 'published';
+      // Permite cargar el formulario del propio borrador sin ampliar el listado.
+      allow get: if activeMember(id) || superadmin();
+      allow list: if superadmin() && request.query.limit != null && request.query.limit <= 100;
+      allow write: if false;
+      allow create: if superadmin() && newVenueInCommit(id)
+        && initialCatalog(request.resource.data, getAfter(/databases/$(database)/documents/establishments/$(id)).data);
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasAny(['lifecycleChangeId'])
+        && superadmin() && publishChangeInCommit(id)
+        && publishedCatalogChange(resource.data, request.resource.data, getAfter(/databases/$(database)/documents/establishments/$(id)).data)
+        && readyPayment(get(/databases/$(database)/documents/establishments/$(id)/settings/payment).data, request.resource.data, id);
+      function updatesPlatformStatus() {
+        let path = /databases/$(database)/documents/establishments/$(id);
+        let previous = get(path).data;
+        let current = getAfter(path).data;
+        return exists(path) && linkedPlatformStatusChange(id, previous, current)
+          && validPlatformCatalogStatus(resource.data, request.resource.data, current);
+      }
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasAny(['platformStatusChangeId'])
+        && superadmin()
+        && updatesPlatformStatus();
+      function updatesSchedule() {
+        let path = /databases/$(database)/documents/establishments/$(id)/settings/schedule;
+        let current = getAfter(path).data;
+        return request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['days','openHour','closeHour','scheduleRevision','scheduleUpdatedAt'])
+          && nextRevision(current, exists(path) ? get(path).data : null)
+          && current.updatedAt == request.time && current.updatedBy == request.auth.uid
+          && scheduleProjectionMatches(current, request.resource.data);
+      }
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['days','openHour','closeHour','scheduleRevision','scheduleUpdatedAt'])
+        && managesSchedule(id) && updatesSchedule();
+      function updatesContact() {
+        let path = /databases/$(database)/documents/establishments/$(id)/settings/contact;
+        let current = getAfter(path).data;
+        return nextRevision(current, exists(path) ? get(path).data : null)
+          && current.updatedAt == request.time && current.updatedBy == request.auth.uid
+          && contactProjectionMatches(current, request.resource.data);
+      }
+      function updatesPayment() {
+        let path = /databases/$(database)/documents/establishments/$(id)/settings/payment;
+        let current = getAfter(path).data;
+        return request.resource.data.booking is map
+          && request.resource.data.booking.diff(resource.data.get('booking', {})).affectedKeys().hasOnly(['payment'])
+          && nextRevision(current, exists(path) ? get(path).data : null)
+          && current.updatedAt == request.time && current.updatedBy == request.auth.uid
+          && paymentProjectionMatches(current, request.resource.data);
+      }
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['phone','description','reference','contactRevision','contactUpdatedAt'])
+        && managesSchedule(id) && updatesContact();
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['booking','paymentRevision','paymentUpdatedAt'])
+        && managesSchedule(id) && updatesPayment();
+      function updatesPricing() {
+        let courtId = request.resource.data.pricingCourtId;
+        let path = /databases/$(database)/documents/establishments/$(id)/courts/$(courtId)/settings/pricing;
+        let current = getAfter(path).data;
+        return directId(courtId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['courts','pricingCourtId','pricingCourtIndex','pricingRevision','pricingUpdatedAt'])
+          && nextRevision(current, exists(path) ? get(path).data : null)
+          && current.updatedAt == request.time && current.updatedBy == request.auth.uid
+          && pricingParentMatches(current, request.resource.data, resource.data);
+      }
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['courts','pricingCourtId','pricingCourtIndex','pricingRevision','pricingUpdatedAt'])
+        && managesPricing(id) && updatesPricing();
+      function addsCourtIndex() {
+        let courtId = request.resource.data.pricingCourtId;
+        let current = getAfter(/databases/$(database)/documents/establishments/$(id)/courts/$(courtId)/settings/pricing).data;
+        return newCourtInCommit(id, courtId)
+          && addedCourtParentMatches(current, request.resource.data, resource.data,
+            getAfter(/databases/$(database)/documents/establishments/$(id)/courts/$(courtId)).data);
+      }
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasAny(['courtAdditionId'])
+        && authenticated() && addsCourtIndex();
+      match /paymentQrs/{qrId} {
+        allow get: if authenticated()
+          && get(/databases/$(database)/documents/catalog/$(id)).data.status == 'published';
+        allow get: if (activeMember(id) || superadmin())
+          && exists(/databases/$(database)/documents/catalog/$(id));
+        function createsPaymentQr() {
+          let path = /databases/$(database)/documents/establishments/$(id)/settings/payment;
+          let current = getAfter(path).data;
+          return current.qr == 'payment-qrs/' + id + '/' + qrId
+            && nextRevision(current, exists(path) ? get(path).data : null)
+            && current.updatedAt == request.time && current.updatedBy == request.auth.uid;
+        }
+        allow create: if managesSchedule(id) && validPaymentQr(request.resource.data, id, qrId)
+          && request.resource.data.createdAt == request.time && createsPaymentQr();
+        allow update, delete: if false;
+      }
+      match /courts/{courtId} {
+        allow read: if authenticated()
+          && get(/databases/$(database)/documents/catalog/$(id)).data.status == 'published';
+        // El dueño carga la proyección de su propio borrador al editar precios.
+        allow get: if activeMember(id) && exists(/databases/$(database)/documents/catalog/$(id));
+        allow get: if superadmin();
+        allow write: if false;
+        allow create: if authenticated() && newCourtInCommit(id, courtId)
+          && request.resource.data == getAfter(/databases/$(database)/documents/establishments/$(id)/courts/$(courtId)).data;
+        allow update: if managesPricing(id)
+          && updatesCourtPricing(id, courtId, resource.data, request.resource.data);
+        match /operations/current {
+          allow read: if authenticated()
+            && get(/databases/$(database)/documents/catalog/$(id)).data.status == 'published';
+          allow get: if activeMember(id);
+          function writesSessionProjection() {
+            let path = sessionPath(id, courtId);
+            let current = getAfter(path).data;
+            return nextRevision(current, exists(path) ? get(path).data : null)
+              && current.updatedAt == request.time && current.updatedBy == request.auth.uid
+              && request.resource.data == sessionProjection(current);
+          }
+          allow create, update: if managesSchedule(id) && writesSessionProjection();
+          allow delete: if false;
+        }
+      }
+      match /closures/{date} {
+        allow read: if authenticated()
+          && get(/databases/$(database)/documents/catalog/$(id)).data.status == 'published';
+        function writesClosure() {
+          let path = /databases/$(database)/documents/establishments/$(id)/closures/$(date);
+          let current = getAfter(path).data;
+          return exists(/databases/$(database)/documents/catalog/$(id))
+            && nextRevision(current, exists(path) ? get(path).data : null)
+            && current.updatedAt == request.time && current.updatedBy == request.auth.uid
+            && request.resource.data == closureProjection(current);
+        }
+        allow create, update: if managesSchedule(id) && writesClosure();
+        allow delete: if false;
+      }
+    }
+    function directId(id) {
+      return id is string && id.matches('^[A-Za-z0-9-]{1,80}$');
+    }
+    function validPaymentSnapshot(p) {
+      return p is map && p.keys().hasAll(['mode','qr','methods','recipient','phone'])
+        && p.keys().hasOnly(['mode','qr','methods','recipient','phone'])
+        && p.mode in ['demo','live']
+        && p.qr is string && p.qr.size() <= 2000
+        && p.methods is list && p.methods.size() >= 1 && p.methods.size() <= 2
+        && p.methods.hasOnly(['Yape','Plin'])
+        && p.recipient is string && p.recipient.size() <= 120
+        && p.phone is string && p.phone.size() <= 20;
+    }
+    // Valida el documento completo en cada creación y actualización. No vuelve a
+    // cotejar tarifas actuales al revisar: el precio contratado queda histórico.
+    function validDirectRequest(d) {
+      let localTime = d.startsAt - duration.value(5, 'h');
+      let fields = d.keys();
+      return fields.hasAll(['clientUid','establishmentId','establishmentName','courtId','courtName','date','hour','startsAt','endsAt','totalCents','advanceCents','createdAt','status','paymentStatus','paymentSnapshot'])
+        && fields.hasOnly(['clientUid','establishmentId','establishmentName','courtId','courtName','date','hour','startsAt','endsAt','totalCents','advanceCents','createdAt','status','paymentStatus','paymentSnapshot','proofSubmittedAt','reviewedAt','reviewedBy','verifiedAdvanceCents','serviceStatus','actualStartAt','actualEndAt'])
+        && d.clientUid is string && d.clientUid.size() >= 1 && d.clientUid.size() <= 128
+        && directId(d.establishmentId) && directId(d.courtId)
+        && d.establishmentName is string && d.establishmentName.size() >= 1 && d.establishmentName.size() <= 120
+        && d.courtName is string && d.courtName.size() >= 1 && d.courtName.size() <= 120
+        && d.date is string && d.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && d.startsAt is timestamp && d.endsAt is timestamp && d.createdAt is timestamp
+        && d.hour is int && d.hour >= 0 && d.hour < 24
+        && localTime.year() == int(d.date.split('-')[0]) && localTime.month() == int(d.date.split('-')[1]) && localTime.day() == int(d.date.split('-')[2])
+        && localTime.hours() == d.hour && localTime.minutes() == 0 && localTime.seconds() == 0 && localTime.nanos() == 0
+        && d.endsAt == d.startsAt + duration.value(1, 'h')
+        && d.totalCents is int && d.totalCents >= 1000 && d.totalCents <= 100000000
+        && d.advanceCents is int && d.advanceCents >= 1 && d.advanceCents <= d.totalCents && d.advanceCents <= 1000000
+        && validPaymentSnapshot(d.paymentSnapshot)
+        && (!fields.hasAny(['proofSubmittedAt']) || d.proofSubmittedAt is timestamp)
+        && (!fields.hasAny(['reviewedAt']) || d.reviewedAt is timestamp)
+        && (!fields.hasAny(['reviewedBy']) || (d.reviewedBy is string && d.reviewedBy.size() >= 1 && d.reviewedBy.size() <= 128))
+        && (!fields.hasAny(['verifiedAdvanceCents']) || (d.verifiedAdvanceCents is int && d.verifiedAdvanceCents == d.advanceCents))
+        && validDirectState(d)
+        && (!fields.hasAny(['serviceStatus','actualStartAt','actualEndAt']) || validDirectService(d));
+    }
+    function validDirectService(d) {
+      return !d.keys().hasAny(['serviceStatus','actualStartAt','actualEndAt'])
+        || (d.status == 'confirmed' && d.paymentStatus == 'verified'
+          && d.keys().hasAll(['serviceStatus','actualStartAt']) && d.actualStartAt is timestamp
+          && d.actualStartAt >= d.startsAt
+          && ((d.serviceStatus == 'running' && !d.keys().hasAny(['actualEndAt']))
+            || (d.serviceStatus == 'completed' && d.actualEndAt is timestamp && d.actualEndAt == d.actualStartAt + duration.value(1, 'h'))));
+    }
+    function validDirectState(d) {
+      let fields = d.keys();
+      let proof = fields.hasAny(['proofSubmittedAt']);
+      let reviewed = fields.hasAll(['reviewedAt','reviewedBy']);
+      let verified = fields.hasAny(['verifiedAdvanceCents']);
+      return (d.status == 'pending_payment' && d.paymentStatus == 'unpaid'
+          && !proof && !fields.hasAny(['reviewedAt','reviewedBy','verifiedAdvanceCents']))
+        || (d.status == 'pending_verification' && d.paymentStatus == 'submitted'
+          && proof && !fields.hasAny(['reviewedAt','reviewedBy','verifiedAdvanceCents']))
+        || (d.status == 'confirmed' && d.paymentStatus == 'verified' && proof && reviewed && verified)
+        || (d.status == 'rejected' && d.paymentStatus == 'unpaid' && proof && reviewed && !verified);
+    }
+    function directConfigurationMatches(d) {
+      let court = getAfter(/databases/$(database)/documents/establishments/$(d.establishmentId)/courts/$(d.courtId)).data;
+      let venue = get(/databases/$(database)/documents/establishments/$(d.establishmentId)).data;
+      let publicVenue = getAfter(/databases/$(database)/documents/catalog/$(d.establishmentId)).data;
+      let publicCourt = getAfter(/databases/$(database)/documents/catalog/$(d.establishmentId)/courts/$(d.courtId)).data;
+      return venue.status == 'published' && venue.bookingPolicy.enabled == true
+        && venue.bookingEngine == 'direct'
+        && publicVenue.status == 'published' && publicVenue.booking.enabled == true
+        && publicVenue.booking.engine == 'direct' && publicVenue.booking.holdMinutes == 15
+        && d.advanceCents == venue.bookingPolicy.advanceCents && d.advanceCents == publicVenue.advanceCents
+        && d.establishmentName == publicVenue.name && d.courtName == publicCourt.name
+        && d.paymentSnapshot == publicVenue.booking.payment
+        && (d.paymentSnapshot.mode == 'demo' || (d.paymentSnapshot.recipient.size() >= 2 && d.paymentSnapshot.phone.size() >= 6))
+        && court.status == 'active' && publicCourt.status == 'active'
+        // La autorización usa la configuración canónica privada. Si una
+        // proyección quedó desfasada, se rechaza la solicitud y se recarga.
+        && court.get('maintenance', false) == false && court.get('runtime', null) == null
+        && directScheduleAllows(d, court)
+        && sessionAllowsRequest(d)
+        && d.totalCents == (d.hour >= court.nightStartsAt ? court.nightPriceCents : court.dayPriceCents);
+    }
+    // Solo se consulta al CREAR. Los cambios no cancelan solicitudes existentes
+    // ni impiden subir/revisar su comprobante o conservar el precio contratado.
+    function directScheduleAllows(d, court) {
+      let path = /databases/$(database)/documents/establishments/$(d.establishmentId)/settings/schedule;
+      let closure = /databases/$(database)/documents/establishments/$(d.establishmentId)/closures/$(d.date);
+      let schedule = existsAfter(path) ? getAfter(path).data : null;
+      let weekday = (d.startsAt - duration.value(5, 'h')).dayOfWeek() % 7;
+      return (!existsAfter(closure) || getAfter(closure).data.closed == false)
+        && (schedule == null
+          ? d.hour >= court.openHour && d.hour < court.closeHour
+            && (court.get('openDays', []).size() == 0 || weekday in court.openDays)
+          : d.hour >= schedule.openHour && d.hour < schedule.closeHour && weekday in schedule.days);
+    }
+    function directLockPath(d) {
+      return /databases/$(database)/documents/direct_slots/$(d.establishmentId)/courts/$(d.courtId)/days/$(d.date)/hours/$(string(d.hour));
+    }
+    function directLimitPath(d) {
+      return /databases/$(database)/documents/direct_limits/$(d.clientUid)/days/$(d.date);
+    }
+    function createsDirectHold(d, id) {
+      let lock = getAfter(directLockPath(d)).data;
+      let quota = getAfter(directLimitPath(d)).data;
+      return lock.reservationId == id && lock.lockedAt == request.time && lock.status == 'held'
+        && quota.lastRequestId == id && quota.updatedAt == request.time;
+    }
+    function validDirectLock(d) {
+      return d.keys().hasAll(['reservationId','lockedAt','status'])
+        && d.keys().hasOnly(['reservationId','lockedAt','status','reviewPending','serviceStatus','actualStartAt','actualEndAt'])
+        && directId(d.reservationId) && d.lockedAt is timestamp
+        && d.status in ['held','confirmed','released']
+        && (!d.keys().hasAny(['reviewPending']) || (d.reviewPending is bool && (d.reviewPending == false || d.status == 'held')))
+        && (!d.keys().hasAny(['serviceStatus','actualStartAt','actualEndAt'])
+          || (d.status == 'confirmed' && d.keys().hasAll(['serviceStatus','actualStartAt']) && d.actualStartAt is timestamp
+            && ((d.serviceStatus == 'running' && !d.keys().hasAny(['actualEndAt']))
+              || (d.serviceStatus == 'completed' && d.actualEndAt is timestamp && d.actualEndAt == d.actualStartAt + duration.value(1, 'h')))));
+    }
+    function liveDirectHold(d, id) {
+      let lock = get(directLockPath(d)).data;
+      return d.createdAt + duration.value(15, 'm') > request.time && d.startsAt > request.time
+        && lock.reservationId == id && lock.status == 'held'
+        && lock.lockedAt == d.createdAt;
+    }
+    function validDirectProof(d, id) {
+      return d.keys().hasAll(['reservationId','clientUid','establishmentId','contentType','imageData','sha256','createdAt'])
+        && d.keys().hasOnly(['reservationId','clientUid','establishmentId','contentType','imageData','sha256','createdAt'])
+        && directId(id) && d.reservationId == id
+        && d.clientUid is string && d.clientUid.size() >= 1 && d.clientUid.size() <= 128
+        && directId(d.establishmentId) && d.contentType == 'image/jpeg'
+        && d.imageData is string && d.imageData.size() >= 32 && d.imageData.size() <= 700000
+        && d.imageData.matches('^data:image/jpeg;base64,/9j/[A-Za-z0-9+/]+={0,2}$')
+        && d.sha256 is string && d.sha256.matches('^[a-f0-9]{64}$')
+        && d.createdAt is timestamp;
+    }
+    match /direct_requests/{id} {
+      allow get: if authenticated() && (resource == null || owner(resource.data.clientUid) || activeMember(resource.data.establishmentId));
+      allow list: if authenticated() && (owner(resource.data.clientUid) || activeMember(resource.data.establishmentId));
+      allow create: if authenticated() && resource == null && directId(id)
+        && owner(request.resource.data.clientUid)
+        && request.resource.data.status == 'pending_payment' && request.resource.data.paymentStatus == 'unpaid'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.startsAt > request.time
+        && request.resource.data.startsAt <= request.time + duration.value(91, 'd')
+        && createsDirectHold(request.resource.data, id)
+        && directConfigurationMatches(request.resource.data)
+        && validDirectRequest(request.resource.data);
+      function submitsProof(d) {
+        let proof = getAfter(/databases/$(database)/documents/direct_proofs/$(id)).data;
+        let lock = getAfter(directLockPath(resource.data)).data;
+        return owner(resource.data.clientUid) && resource.data.status == 'pending_payment'
+          && liveDirectHold(resource.data, id)
+          && d.diff(resource.data).affectedKeys().hasOnly(['status','paymentStatus','proofSubmittedAt'])
+          && d.status == 'pending_verification' && d.paymentStatus == 'submitted'
+          && d.proofSubmittedAt == request.time
+          && lock.reservationId == id && lock.status == 'held' && lock.lockedAt == resource.data.createdAt && lock.reviewPending == true
+          && proof.reservationId == id && proof.clientUid == resource.data.clientUid
+          && proof.establishmentId == resource.data.establishmentId && proof.createdAt == request.time;
+      }
+      function reviewsProof(d) {
+        let lock = getAfter(directLockPath(resource.data)).data;
+        let incomePath = /databases/$(database)/documents/establishments/$(resource.data.establishmentId)/court_income/$(id);
+        return activeMember(resource.data.establishmentId)
+          && resource.data.status == 'pending_verification' && liveDirectHold(resource.data, id)
+          && exists(/databases/$(database)/documents/direct_proofs/$(id))
+          && d.diff(resource.data).affectedKeys().hasOnly(['status','paymentStatus','reviewedAt','reviewedBy','verifiedAdvanceCents'])
+          && d.reviewedAt == request.time && d.reviewedBy == request.auth.uid
+          && lock.reservationId == id && lock.lockedAt == resource.data.createdAt
+          && lock.get('reviewPending', false) == false
+          && ((d.status == 'confirmed' && lock.status == 'confirmed'
+              && !exists(incomePath) && getAfter(incomePath).data == courtIncomeInitial(id, d))
+            || (d.status == 'rejected' && lock.status == 'released'));
+      }
+      function recordsSession(d) {
+        let path = sessionPath(resource.data.establishmentId, resource.data.courtId);
+        let previous = exists(path) ? get(path).data : null;
+        let current = getAfter(path).data;
+        let slot = getAfter(directLockPath(resource.data)).data;
+        let dayStart = resource.data.startsAt - duration.value(resource.data.hour, 'h');
+        return managesSchedule(resource.data.establishmentId)
+          && resource.data.status == 'confirmed' && resource.data.paymentStatus == 'verified'
+          && d.diff(resource.data).affectedKeys().hasOnly(['serviceStatus','actualStartAt','actualEndAt'])
+          && validDirectService(d)
+          && current.updatedAt == request.time && current.updatedBy == request.auth.uid
+          && nextRevision(current, previous)
+          && slot.reservationId == id && slot.status == 'confirmed' && slot.lockedAt == resource.data.createdAt
+          && slot.serviceStatus == d.serviceStatus && slot.actualStartAt == d.actualStartAt
+          && ((resource.data.get('serviceStatus', '') == '' && d.serviceStatus == 'running'
+              && d.actualStartAt == request.time && !d.keys().hasAny(['actualEndAt'])
+              && resource.data.startsAt <= request.time && request.time >= dayStart && request.time < dayStart + duration.value(1, 'd')
+              && sessionCanStart(previous)
+              && current.activeReservationId == id && current.activeDate == resource.data.date && current.actualStartAt == request.time)
+            || (resource.data.serviceStatus == 'running' && d.serviceStatus == 'completed'
+              && d.actualStartAt == resource.data.actualStartAt
+              && request.time >= resource.data.actualStartAt + duration.value(1, 'h')
+              && d.actualEndAt == resource.data.actualStartAt + duration.value(1, 'h')
+              && previous.activeReservationId == id && previous.actualStartAt == resource.data.actualStartAt
+              && current.activeReservationId == null && current.lastEndedAt == d.actualEndAt
+              && slot.actualEndAt == d.actualEndAt));
+      }
+      allow update: if authenticated() && resource != null
+        // La rama operativa valida sus tres campos; el diff conserva todos los
+        // campos históricos ya validados al crear/revisar, sin reevaluarlos.
+        && (((submitsProof(request.resource.data) || reviewsProof(request.resource.data))
+            && validDirectRequest(request.resource.data)) || recordsSession(request.resource.data));
+      allow delete: if false;
+    }
+    match /direct_slots/{venue}/courts/{court}/days/{date}/hours/{hour} {
+      // Disponibilidad sin identidad, importes ni contenido de comprobantes.
+      // Incluye horas reales: un borrador solo lo consulta su administración.
+      allow read: if authenticated()
+        && exists(/databases/$(database)/documents/catalog/$(venue))
+        && (get(/databases/$(database)/documents/catalog/$(venue)).data.status == 'published' || activeMember(venue));
+      allow read: if superadmin() && exists(/databases/$(database)/documents/establishments/$(venue));
+      function createsLock(d) {
+        let booking = getAfter(/databases/$(database)/documents/direct_requests/$(d.reservationId)).data;
+        return booking.clientUid == request.auth.uid && booking.createdAt == request.time
+          && booking.establishmentId == venue && booking.courtId == court && booking.date == date && string(booking.hour) == hour
+          && booking.status == 'pending_payment' && d.status == 'held' && d.lockedAt == request.time
+          && d.get('reviewPending', false) == false;
+      }
+      function replacesLock() {
+        let previous = get(/databases/$(database)/documents/direct_requests/$(resource.data.reservationId)).data;
+        return (resource.data.status == 'released' && previous.status == 'rejected')
+          || (resource.data.status == 'held' && resource.data.lockedAt + duration.value(15, 'm') <= request.time
+            && previous.status in ['pending_payment','pending_verification']);
+      }
+      function reviewsLock(d) {
+        let booking = getAfter(/databases/$(database)/documents/direct_requests/$(resource.data.reservationId)).data;
+        return activeMember(venue) && resource.data.status == 'held'
+          && d.diff(resource.data).affectedKeys().hasOnly(['status','reviewPending']) && d.get('reviewPending', false) == false
+          && booking.establishmentId == venue && booking.courtId == court
+          && booking.date == date && string(booking.hour) == hour
+          && booking.reviewedBy == request.auth.uid && booking.reviewedAt == request.time
+          && ((d.status == 'confirmed' && booking.status == 'confirmed' && booking.paymentStatus == 'verified')
+            || (d.status == 'released' && booking.status == 'rejected'));
+      }
+      function submitsReviewMetadata(d) {
+        let path = /databases/$(database)/documents/direct_requests/$(resource.data.reservationId);
+        let previous = get(path).data;
+        let current = getAfter(path).data;
+        return resource.data.status == 'held' && resource.data.get('reviewPending', false) == false
+          && d.diff(resource.data).affectedKeys().hasOnly(['reviewPending']) && d.reviewPending == true
+          && previous.clientUid == request.auth.uid && previous.status == 'pending_payment'
+          && previous.createdAt == resource.data.lockedAt && previous.createdAt + duration.value(15, 'm') > request.time
+          && previous.startsAt > request.time && current.establishmentId == venue && current.courtId == court
+          && current.date == date && string(current.hour) == hour
+          && current.status == 'pending_verification' && current.paymentStatus == 'submitted'
+          && current.proofSubmittedAt == request.time;
+      }
+      function recordsSessionLock(d) {
+        let booking = getAfter(/databases/$(database)/documents/direct_requests/$(resource.data.reservationId)).data;
+        let current = getAfter(sessionPath(venue, court)).data;
+        return managesSchedule(venue) && resource.data.status == 'confirmed' && d.status == 'confirmed'
+          && d.diff(resource.data).affectedKeys().hasOnly(['serviceStatus','actualStartAt','actualEndAt'])
+          && booking.establishmentId == venue && booking.courtId == court && booking.date == date && string(booking.hour) == hour
+          && d.serviceStatus == booking.serviceStatus && d.actualStartAt == booking.actualStartAt
+          && current.updatedAt == request.time && current.updatedBy == request.auth.uid
+          && ((d.serviceStatus == 'running' && d.actualStartAt == request.time && current.activeReservationId == d.reservationId)
+            || (d.serviceStatus == 'completed' && request.time >= d.actualStartAt + duration.value(1, 'h')
+              && d.actualEndAt == d.actualStartAt + duration.value(1, 'h') && d.actualEndAt == booking.actualEndAt && current.activeReservationId == null));
+      }
+      allow create: if authenticated() && resource == null && validDirectLock(request.resource.data) && createsLock(request.resource.data);
+      allow update: if authenticated() && resource != null && validDirectLock(request.resource.data)
+        && ((createsLock(request.resource.data) && replacesLock()) || submitsReviewMetadata(request.resource.data)
+          || reviewsLock(request.resource.data) || recordsSessionLock(request.resource.data));
+      allow delete: if false;
+    }
+    match /direct_proofs/{id} {
+      allow get: if authenticated() && (resource == null || owner(resource.data.clientUid) || activeMember(resource.data.establishmentId));
+      allow list: if false;
+      function submitsOwnProof(d) {
+        let booking = get(/databases/$(database)/documents/direct_requests/$(id)).data;
+        let afterBooking = getAfter(/databases/$(database)/documents/direct_requests/$(id)).data;
+        return owner(d.clientUid) && booking.clientUid == d.clientUid
+          && booking.establishmentId == d.establishmentId && booking.status == 'pending_payment'
+          && liveDirectHold(booking, id)
+          && afterBooking.status == 'pending_verification' && afterBooking.paymentStatus == 'submitted'
+          && afterBooking.proofSubmittedAt == request.time && d.createdAt == request.time;
+      }
+      allow create: if authenticated() && resource == null && validDirectProof(request.resource.data, id)
+        && submitsOwnProof(request.resource.data);
+      allow update, delete: if false;
+    }
+    function validDirectLimit(d) {
+      return d.keys().hasAll(['count','lastRequestId','updatedAt'])
+        && d.keys().hasOnly(['count','lastRequestId','updatedAt'])
+        && d.count is int && d.count >= 1 && d.count <= 20
+        && directId(d.lastRequestId) && d.updatedAt is timestamp;
+    }
+    match /direct_limits/{uid}/days/{date} {
+      allow read: if owner(uid);
+      function registersOwnRequest(d) {
+        let path = /databases/$(database)/documents/direct_requests/$(d.lastRequestId);
+        let booking = getAfter(path).data;
+        return date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && !exists(path) && booking.clientUid == uid && booking.date == date
+          && booking.status == 'pending_payment' && booking.createdAt == request.time
+          && d.updatedAt == request.time;
+      }
+      allow create: if owner(uid) && resource == null && validDirectLimit(request.resource.data)
+        && request.resource.data.count == 1 && registersOwnRequest(request.resource.data);
+      allow update: if owner(uid) && resource != null && validDirectLimit(request.resource.data)
+        && request.resource.data.count == resource.data.count + 1
+        && registersOwnRequest(request.resource.data);
+      allow delete: if false;
+    }
+    match /establishment_invitations/{invitationId} {
+      allow get: if superadmin() || ownInvitationEmail(resource.data);
+      allow list: if request.query.limit != null && request.query.limit <= 100
+        && (superadmin() || ownInvitationEmail(resource.data));
+      allow create: if superadmin() && newVenueInCommit(invitationId)
+        && initialInvitation(request.resource.data, invitationId,
+          getAfter(/databases/$(database)/documents/establishments/$(invitationId)).data);
+      allow update: if authenticated() && invitationId == resource.data.establishmentId
+        && ownerChangeInCommit(resource.data.establishmentId)
+        && acceptedInvitation(resource.data, request.resource.data);
+      allow delete: if false;
+    }
+    match /audit_logs/{eventId} {
+      allow get: if superadmin();
+      allow list: if superadmin() && request.query.limit != null && request.query.limit <= 30;
+      function validPlatformStatusAudit(d) {
+        let path = /databases/$(database)/documents/establishments/$(d.establishmentId);
+        let previous = get(path).data;
+        let current = getAfter(path).data;
+        return d.keys().hasAll(['action','establishmentId','actorUid','at','status','previousStatus','publicationStatus'])
+          && d.keys().hasOnly(['action','establishmentId','actorUid','at','status','previousStatus','publicationStatus'])
+          && directId(d.establishmentId) && exists(path)
+          && current.platformStatusChangeId == eventId
+          && linkedPlatformStatusChange(d.establishmentId, previous, current)
+          && d == platformStatusEvent(d.establishmentId, previous, current);
+      }
+      function validLifecycleAudit(d) {
+        let id = d.establishmentId;
+        let path = /databases/$(database)/documents/establishments/$(id);
+        let current = getAfter(path).data;
+        return directId(id) && current.lifecycleChangeId == eventId && lifecycleMetadata(current)
+          && ((d.action == 'establishment_created' && superadmin() && !exists(path)
+              && initialVenue(current, id) && eventId == id
+              && d == lifecycleEvent(id, 'establishment_created', 'approved', 'draft'))
+            || (d.action == 'owner_invitation_accepted' && ownerChangeInCommit(id)
+              && d == lifecycleEvent(id, 'owner_invitation_accepted', 'approved', 'draft'))
+            || (d.action == 'business_published' && superadmin() && publishChangeInCommit(id)
+              && validPublishedCourtsTail(getAfter(/databases/$(database)/documents/catalog/$(id)).data.courts, current.bookingPolicy.advanceCents)
+              && d == lifecycleEvent(id, 'business_published', 'published', 'published')));
+      }
+      function validBusinessSettingAudit(d) {
+        let id = d.establishmentId;
+        let ref = d.referenceId;
+        let rev = string(d.revision);
+        let source = d.kind == 'closure'
+          ? /databases/$(database)/documents/establishments/$(id)/closures/$(ref)/history/$(rev)
+          : (d.kind == 'pricing'
+            ? /databases/$(database)/documents/establishments/$(id)/courts/$(ref)/settings/pricing/history/$(rev)
+            : /databases/$(database)/documents/establishments/$(id)/settings/$(d.kind)/history/$(rev));
+        let event = getAfter(source).data;
+        return d.keys().hasAll(['action','establishmentId','actorUid','at','kind','referenceId','revision'])
+          && d.keys().hasOnly(['action','establishmentId','actorUid','at','kind','referenceId','revision'])
+          && lifecycleUuid(eventId) && directId(id)
+          && (d.kind == 'pricing' ? managesPricing(id) : activeMember(id))
+          && d.actorUid == request.auth.uid && d.at == request.time && d.revision is int && d.revision >= 1 && d.revision <= 1000000000
+          && d.kind in ['contact','payment','schedule','closure','pricing'] && d.referenceId is string && d.referenceId.size() <= 80
+          && ((d.kind in ['contact','payment','schedule'] && ref == d.kind)
+            || (d.kind == 'closure' && ref.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'))
+            || (d.kind == 'pricing' && directId(ref)))
+          && !exists(source) && event.establishmentId == id && event.kind == d.kind
+          && event.revision == d.revision && event.actorUid == request.auth.uid && event.at == request.time;
+      }
+      allow create: if request.resource.data.action == 'establishment_status_changed'
+        && superadmin() && validPlatformStatusAudit(request.resource.data);
+      allow create: if request.resource.data.action in ['establishment_created','owner_invitation_accepted','business_published']
+        && authenticated() && validLifecycleAudit(request.resource.data);
+      allow create: if request.resource.data.action == 'business_setting_changed'
+        && authenticated() && validBusinessSettingAudit(request.resource.data);
+      allow update, delete: if false;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

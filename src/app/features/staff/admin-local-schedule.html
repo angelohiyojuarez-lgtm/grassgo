@@ -1,0 +1,257 @@
+<div class="local-schedule">
+  <div class="local-heading">
+    <span class="eyebrow">MI LOCAL</span>
+    <h2>Horarios y días cerrados</h2>
+    <p>Decide cuándo atiendes en {{ name() || 'tu establecimiento' }}.</p>
+  </div>
+  @if (loading()) {
+    <div class="panel schedule-loading" role="status">Estamos consultando tu horario…</div>
+  } @else if (loadError()) {
+    <div class="notice notice-error" role="alert">
+      <p>{{ loadError() }}</p>
+      <button class="button button-outline" (click)="load()">Volver a consultar</button>
+    </div>
+  } @else {
+    <div class="notice schedule-policy">
+      <gg-icon name="shield" />
+      <p>
+        Los cambios aplican a nuevas solicitudes. Las solicitudes y reservas existentes se mantienen
+        y deben atenderse.
+      </p>
+    </div>
+    <section class="panel schedule-section" aria-labelledby="weekly-title">
+      <div class="section-title">
+        <span class="step-number">1</span>
+        <div>
+          <h3 id="weekly-title">Tu horario habitual</h3>
+          <p>Se aplica a todas las canchas del local.</p>
+        </div>
+      </div>
+      @if (weeklyError()) {
+        <p class="notice notice-error" role="alert">{{ weeklyError() }}</p>
+      }
+      @if (weeklyMessage()) {
+        <p class="notice notice-success" role="status">{{ weeklyMessage() }}</p>
+      }
+      <form (ngSubmit)="saveWeekly()">
+        <fieldset [disabled]="busy()">
+          <legend>¿Qué días atiendes?</legend>
+          <p class="help">Deja apagados los días en los que no atiendes.</p>
+          <div class="day-actions">
+            <button type="button" class="button button-outline" (click)="selectAllDays(true)">
+              Todos los días</button
+            ><button type="button" class="button button-outline" (click)="selectAllDays(false)">
+              Quitar selección
+            </button>
+          </div>
+          <div class="weekdays">
+            @for (day of weekdays; track day.id) {
+              <button
+                type="button"
+                class="weekday"
+                [class.selected]="weekly.days.includes(day.id)"
+                [attr.aria-pressed]="weekly.days.includes(day.id)"
+                (click)="toggleDay(day.id)"
+              >
+                <strong>{{ day.name }}</strong
+                ><span>{{ weekly.days.includes(day.id) ? 'Abierto' : 'Cerrado' }}</span>
+              </button>
+            }
+          </div>
+          <div class="hour-fields">
+            <label
+              >Abre a las<select name="opening" [(ngModel)]="weekly.openHour">
+                <option [ngValue]="null">Elige la apertura</option>
+                @for (hourValue of hours; track hourValue) {
+                  <option [ngValue]="hourValue">{{ hour(hourValue) }}</option>
+                }
+              </select></label
+            >
+            <label
+              >Cierra a las<select name="closing" [(ngModel)]="weekly.closeHour">
+                <option [ngValue]="null">Elige el cierre</option>
+                @for (hourValue of closingHours; track hourValue) {
+                  <option [ngValue]="hourValue">{{ hour(hourValue) }}</option>
+                }
+              </select></label
+            >
+          </div>
+          <p class="help">
+            El mismo horario se aplica a los días elegidos. El cierre debe ser posterior a la
+            apertura.
+          </p>
+          <div class="schedule-summary" aria-live="polite">
+            <gg-icon name="clock" /><strong>{{ weeklySummary() }}</strong>
+          </div>
+          <button type="submit" class="button button-primary save-button">
+            {{ busy() ? 'Guardando…' : 'Guardar horario' }}<gg-icon name="check" />
+          </button>
+        </fieldset>
+      </form>
+      @if (weekly.revision === 0) {
+        <p class="help setup-help">
+          Para recibir reservas también deben estar completas las canchas y los datos de pago del
+          local.
+        </p>
+      }
+    </section>
+
+    <section class="panel schedule-section" aria-labelledby="exception-title">
+      <div class="section-title">
+        <span class="step-number">2</span>
+        <div>
+          <h3 id="exception-title">Cerrar una fecha específica</h3>
+          <p>Para un feriado, mantenimiento u otro día especial.</p>
+        </div>
+      </div>
+      @if (closureError()) {
+        <p class="notice notice-error" role="alert">{{ closureError() }}</p>
+      }
+      @if (closureMessage()) {
+        <p class="notice notice-success" role="status">{{ closureMessage() }}</p>
+      }
+      @if (pendingClosure(); as pending) {
+        <div class="close-confirm" role="group" aria-labelledby="close-confirm-title">
+          <h4 id="close-confirm-title">Vas a cerrar para nuevas reservas</h4>
+          <strong class="date-emphasis">{{ dateLabel(pending.date) }}</strong>
+          <p>Las solicitudes y reservas que ya existen se mantienen. Este cierre no las cancela.</p>
+          @if (pending.reason) {
+            <p class="help">Motivo interno: {{ pending.reason }}</p>
+          }
+          <div class="confirmation-actions">
+            <button
+              type="button"
+              class="button button-outline"
+              [disabled]="busy()"
+              (click)="pendingClosure.set(null)"
+            >
+              Volver</button
+            ><button
+              type="button"
+              class="button button-primary"
+              [disabled]="busy()"
+              (click)="confirmClosure()"
+            >
+              {{ busy() ? 'Guardando…' : 'Confirmar cierre para nuevas reservas' }}
+            </button>
+          </div>
+        </div>
+      } @else {
+        <form (ngSubmit)="reviewClosure()">
+          <fieldset [disabled]="busy()">
+            <label
+              >¿Qué día estará cerrado?<input
+                type="date"
+                name="closed-date"
+                [min]="today()"
+                [ngModel]="closureDate"
+                (ngModelChange)="chooseClosureDate($event)"
+            /></label>
+            @if (checkingDate()) {
+              <p class="help" role="status">Consultando esa fecha…</p>
+            }
+            <label
+              >Motivo interno <span class="optional">(opcional)</span
+              ><input
+                type="text"
+                name="closed-reason"
+                [(ngModel)]="closureReason"
+                maxlength="160"
+                placeholder="Ej.: mantenimiento"
+                [disabled]="checkingDate()"
+            /></label>
+            <p class="help">Este motivo solo lo verá la administración del local.</p>
+            <button
+              type="submit"
+              class="button button-primary save-button"
+              [disabled]="checkingDate()"
+            >
+              Revisar cierre<gg-icon name="arrow" />
+            </button>
+          </fieldset>
+        </form>
+      }
+    </section>
+
+    <section class="panel schedule-section" aria-labelledby="closed-dates-title">
+      <div class="section-title">
+        <span class="step-number">3</span>
+        <div>
+          <h3 id="closed-dates-title">Tus próximas fechas cerradas</h3>
+          <p>Puedes quitar un cierre cuando cambien tus planes.</p>
+        </div>
+      </div>
+      @if (listError()) {
+        <p class="notice notice-error" role="alert">{{ listError() }}</p>
+      }
+      <button
+        type="button"
+        class="button button-outline refresh-dates"
+        [disabled]="busy() || listLoading()"
+        (click)="refreshClosures()"
+      >
+        {{ listLoading() ? 'Consultando…' : 'Actualizar fechas' }}<gg-icon name="activity" />
+      </button>
+      @if (reopening(); as item) {
+        <div class="close-confirm" role="group" aria-labelledby="reopen-title">
+          <h4 id="reopen-title">¿Quitar el cierre de esta fecha?</h4>
+          <strong class="date-emphasis">{{ dateLabel(item.date) }}</strong>
+          <p>
+            Volverá a aplicarse el horario habitual. Si ese día no atiendes normalmente, seguirá
+            cerrado.
+          </p>
+          <div class="confirmation-actions">
+            <button
+              type="button"
+              class="button button-outline"
+              [disabled]="busy()"
+              (click)="reopening.set(null)"
+            >
+              Volver</button
+            ><button
+              type="button"
+              class="button button-primary"
+              [disabled]="busy()"
+              (click)="confirmReopen()"
+            >
+              {{ busy() ? 'Guardando…' : 'Sí, quitar cierre' }}
+            </button>
+          </div>
+        </div>
+      }
+      <div class="closed-list">
+        @for (item of closures(); track item.date) {
+          <article class="closed-date">
+            <div>
+              <span class="tag">Cerrado para nuevas reservas</span>
+              <h4>{{ dateLabel(item.date) }}</h4>
+              @if (item.reason) {
+                <p>{{ item.reason }}</p>
+              }
+            </div>
+            <button
+              type="button"
+              class="button button-outline"
+              [disabled]="busy()"
+              (click)="reopening.set(item)"
+            >
+              Quitar cierre
+            </button>
+          </article>
+        } @empty {
+          <div class="closed-empty">
+            <gg-icon name="calendar" />
+            <p>No tienes cierres especiales próximos.</p>
+            <span>Se aplicará tu horario habitual.</span>
+          </div>
+        }
+      </div>
+      @if (closureLimitReached()) {
+        <p class="help">
+          Se muestran hasta 100 fechas cerradas próximas. Para revisar otra fecha, selecciónala en
+          el formulario de arriba.
+        </p>
+      }
+    </section>
+  }
+</div>

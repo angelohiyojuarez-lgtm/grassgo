@@ -1,0 +1,130 @@
+<div class="local-pricing">
+  <div class="pricing-heading">
+    <span class="eyebrow">{{
+      context() === 'platform' ? 'SUPERADMIN · PRECIOS DEL NEGOCIO' : 'MI LOCAL'
+    }}</span>
+    <h2>{{ context() === 'platform' ? 'Precios por cancha' : 'Precios de tus canchas' }}</h2>
+    <p>Elige cuánto cobrar por hora en {{ name() || 'tu local' }}.</p>
+  </div>
+  @if (loading()) {
+    <div class="panel pricing-loading" role="status">Estamos consultando tus precios…</div>
+  } @else if (loadError()) {
+    <div class="notice notice-error" role="alert">
+      <p>{{ loadError() }}</p>
+      <button class="button button-outline" (click)="load()">Volver a consultar</button>
+    </div>
+  } @else {
+    <div class="notice pricing-policy">
+      <gg-icon name="shield" />
+      <p>
+        Estos precios se aplican a nuevas solicitudes. Las reservas que ya existen conservan el
+        importe acordado. El adelanto no cambia.
+      </p>
+    </div>
+    @if (advance() !== null) {
+      <p class="advance-info">
+        Adelanto actual del local: <strong>{{ money(advance()!) }}</strong>
+      </p>
+    }
+    @if (pendingReload(); as item) {
+      <div class="notice reload-confirm" role="group" aria-labelledby="pricing-reload-title">
+        <h3 id="pricing-reload-title">¿Consultar los precios guardados?</h3>
+        <p>
+          Se descartarán los cambios sin guardar de {{ item.name }}. Las otras canchas conservarán
+          sus cambios.
+        </p>
+        <div class="button-row">
+          <button
+            class="button button-outline"
+            [disabled]="busy()"
+            (click)="pendingReload.set(null)"
+          >
+            Seguir editando</button
+          ><button class="button button-primary" [disabled]="busy()" (click)="confirmReload()">
+            Sí, consultar precios guardados
+          </button>
+        </div>
+      </div>
+    }
+    @for (court of courts(); track court.id) {
+      <section class="panel pricing-section" [attr.aria-label]="'Precios de ' + court.name">
+        <h3>{{ court.name }}</h3>
+        @if (court.sport) {
+          <p class="help">{{ court.sport }}</p>
+        }
+        <p class="help">
+          Precios por una hora de cancha, en soles. Si cobras lo mismo de día y de noche, repite el
+          precio.
+        </p>
+        @if (court.error) {
+          <p class="notice notice-error" role="alert">{{ court.error }}</p>
+        }
+        @if (court.message) {
+          <p class="notice notice-success" role="status">{{ court.message }}</p>
+        }
+        <form (ngSubmit)="save(court)">
+          <fieldset [disabled]="busy()">
+            <div class="price-fields">
+              <label
+                >Precio de día · S/<input
+                  type="text"
+                  inputmode="decimal"
+                  [name]="court.id + '-day'"
+                  [(ngModel)]="court.daySoles"
+                  [attr.aria-label]="'Precio de día de ' + court.name"
+                  maxlength="8"
+                  placeholder="Precio en soles"
+              /></label>
+              <label
+                >Precio de noche · S/<input
+                  type="text"
+                  inputmode="decimal"
+                  [name]="court.id + '-night'"
+                  [(ngModel)]="court.nightSoles"
+                  [attr.aria-label]="'Precio de noche de ' + court.name"
+                  maxlength="8"
+                  placeholder="Precio en soles"
+              /></label>
+            </div>
+            <label
+              >La tarifa de noche empieza a las<select
+                [name]="court.id + '-night-start'"
+                [(ngModel)]="court.nightStartsAt"
+                [attr.aria-label]="'Inicio de tarifa de noche de ' + court.name"
+              >
+                <option [ngValue]="null">Elige la hora</option>
+                @for (value of hours; track value) {
+                  <option [ngValue]="value">{{ hour(value) }}</option>
+                }
+              </select></label
+            >
+            <p class="help">Puedes escribir hasta dos decimales con punto o coma.</p>
+            <div class="pricing-summary" aria-live="polite">
+              <gg-icon name="clock" /><strong>{{ summary(court) }}</strong>
+            </div>
+            <button type="submit" class="button button-primary save-button">
+              {{ busy() ? 'Guardando…' : 'Guardar precios de esta cancha' }}<gg-icon name="check" />
+            </button>
+          </fieldset>
+        </form>
+        <button
+          type="button"
+          class="button button-outline reload-button"
+          [disabled]="busy()"
+          (click)="requestReload(court)"
+        >
+          Consultar precios guardados<gg-icon name="activity" />
+        </button>
+      </section>
+    } @empty {
+      <div class="panel pricing-empty">
+        <gg-icon name="field" />
+        <h3>Todavía no hay canchas operativas configuradas</h3>
+        <p>
+          El administrador de la plataforma debe completar las canchas de este local. Después podrás
+          editar sus precios aquí.
+        </p>
+      </div>
+    }
+  }
+</div>

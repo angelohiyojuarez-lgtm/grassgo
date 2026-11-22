@@ -1,0 +1,214 @@
+/* GrassGo / identidad deportiva. La lógica y las rutas conservan sus contratos. */
+@font-face {
+  font-family: 'Manrope';
+  src: url('./assets/fonts/manrope-variable.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+}
+:root {
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  --paper: #f5fce9;
+  --ink: #182c23;
+  --muted: #637168;
+  --green: #126443;
+  --green-dark: #073e2b;
+  --line: #dfe6df;
+  --cyan: #126443;
+  --blue: #126443;
+  --lime: #c3f73c;
+  --forest: #103e2d;
+  --radius: 16px;
+}
+body { background: radial-gradient(ellipse at 100% 0%, #c3f73c70, transparent 55%), radial-gradient(ellipse at 0% 55%, #21c78330, transparent 55%), var(--paper); }
+h1,h2,h3 { letter-spacing: -.025em; font-weight: 650; }
+.brand { letter-spacing: -1.8px; }
+.brand-image { display:block; flex-shrink:0; width:58px; height:58px; margin-right:10px; object-fit:contain; border-radius:13px; }
+.brand-small .brand-image { width:46px; height:46px; border-radius:10px; }
+.access-top .brand-image { width:72px; height:72px; border-radius:16px; }
+gg-platform-dashboard .platform-sidebar .brand-image { width:56px; height:56px; }
+.brand-go,.brand-dot,.cyan-text { color: var(--green); }
+.brand-mark { background: var(--forest); color: var(--lime); border-radius: 10px; box-shadow: none; transform: rotate(-7deg); }
+.brand-mark gg-icon { transform: rotate(7deg); }
+.site-header { background: #fffffff5; backdrop-filter: blur(12px); }
+.header-inner { height: 76px; }
+.desktop-nav { gap: 9px; }
+.desktop-nav a { padding: 0 17px; border-radius: 9px; }
+.desktop-nav a.active { color: var(--forest); background: #eef3e9; }
+.header-account { border-radius: 10px; }
+.button { border-radius: 11px; font-weight: 650; transition: background .18s, transform .18s, box-shadow .18s; }
+.button-primary { background: var(--forest); color: white; border: 1px solid var(--forest); box-shadow: none; }
+.button-primary:hover:not(:disabled) { background: #18583e; box-shadow: 0 5px 15px #14372718; }
+.button-outline { border-color: #ccd7cd; background: white; color: var(--forest); }
+.button-white { background: var(--lime); color: #163321; border-color: var(--lime); }
+.text-button,.back-link:hover { color: var(--green); }
+.panel { border-radius: 16px; box-shadow: 0 4px 20px #233a2c05; border-color: var(--line); }
+.eyebrow { color: #446b50; letter-spacing: .14em; font-size: 10px; }
+.quick-icon,.soft-icon,.empty-icon,.empty-small { color: var(--forest); background: #eff5e7; border-radius: 12px; }
+.tag { border-radius: 6px; }
+.tag.confirmed { background: #e3efdf; color: #215430; }
+.notice { border-radius: 10px; }
+::selection { background: var(--lime); color: var(--forest); }
+:where(a,button,input,select,textarea):focus-visible { outline: 3px solid #30784b; outline-offset: 3px; }
+.mobile-nav { background: #fffffff7; border-top-color: var(--line); }
+.mobile-nav a.active { color: var(--forest); }
+.mobile-nav a.active gg-icon { background: var(--lime); border-radius: 8px; }
+.site-footer { border-color: var(--line); }
+
+/* Acceso: fotografía atmosférica, formulario blanco y foco en una acción. */
+.access-scene { background: radial-gradient(ellipse at 90% 5%, #c3f73c80, transparent 55%), radial-gradient(ellipse at 0% 90%, #21c78340, transparent 55%), var(--paper); padding: 0 4vw; }
+.access-layout { max-width: 1260px; grid-template-columns: 1.14fr 1fr; gap: 0; background: white; border-radius: 24px; overflow: hidden; padding: 0; margin: 12px auto 28px; flex: unset; min-height: 650px; border: 1px solid #e0e7de; box-shadow: 0 20px 60px #193c2110; }
+.access-top { max-width: 1260px; padding: 26px 0 8px; }
+.access-edition { color: #486651; }
+.access-story { position: relative; align-self: stretch; display: flex; flex-direction: column; justify-content: center; padding: 55px 44px 85px; color: white; background: linear-gradient(180deg,#0c3529e8 0%,#0c3529c9 45%,#0c35294a 100%),url('/assets/login-estadio.png') center/cover; }
+.access-story::after { content:''; position:absolute; width:160px; height:160px; border:1px solid #d7ff9b35; border-radius:50%; right:-60px; top:35px; pointer-events:none; }
+.access-kicker { color: #e2f4d4; font-size: 9px; }
+.access-kicker > span { background: var(--lime); box-shadow: 0 0 0 5px #c6f36a15; }
+.access-story h1 { font-size: clamp(38px,4.4vw,66px); font-weight:600; line-height:1.12; letter-spacing:-.035em; margin:32px 0 25px; }
+.access-story h1 em { color: var(--lime); }
+.access-story > p { color: #e1eadf; max-width: 340px; font-size:14px; line-height:1.75; }
+.story-bottom { margin-top:30px; }
+.story-field { background:#c6f36a; color:#143e2a; border:0; border-radius:10px; }
+.story-bottom div > span { color:#d2e2d1; }
+.sport-photo-note { position:absolute; bottom:18px; left:44px; color:#e2e9e1; font-size:9px; letter-spacing:.04em; }
+.access-card { padding:40px; background:white; border:0; border-radius:0; box-shadow:none; backdrop-filter:none; max-width:450px; }
+.form-symbol { background:#edf4e6; color:var(--forest); box-shadow:none; border-radius:12px; }
+.glass-badge { color:#496450; }
+.access-card h2 { font-size:30px; }
+.access-card input { border-radius:10px; background:#fafbf8; border-color:#dce4db; }
+.access-card .button-primary { background:var(--lime); color:#183d25; border-color:var(--lime); min-height:54px; }
+.access-card .button-primary:hover:not(:disabled) { background:#b4e45a; }
+.access-footer { max-width:1260px; width:100%; margin:auto auto 0; padding:0 0 24px; color:#607264; }
+.access-security { color:#637168; }
+.access-card input::placeholder { color:#69766b; opacity:1; }
+.access-card label { color:#304d3a; font-size:13px; }
+.home-tip { padding:15px 18px; border-radius:10px; }
+.home-tip p,.home-tip gg-icon { color:#47634b; }
+
+/* Home editorial: blanco, fotografía, verde oscuro y una llamada lima. */
+.customer-home { max-width:1200px; padding-top:30px; }
+.home-greeting { margin-bottom:26px; }
+.home-greeting h1 { font-size:clamp(27px,3vw,39px); font-weight:600; letter-spacing:-.03em; }
+.home-greeting p { font-size:13px; }
+.user-bubble { background:var(--forest); color:var(--lime); border-radius:14px; }
+.play-banner { min-height:450px; grid-template-columns:1fr; border-radius:20px; background:var(--forest); box-shadow:none; }
+.play-banner-photo { position:absolute; inset:0; z-index:0; opacity:1; background:linear-gradient(90deg,#063d28ed 0%,#063d28b8 36%,#063d2810 78%),url('/assets/login-estadio.png') center 58%/cover; }
+.play-banner-copy { padding:49px 48px 65px; position:relative; max-width:650px; }
+.play-banner h2 { font-size:clamp(38px,4.8vw,62px); font-weight:600; letter-spacing:-.035em; line-height:1.12; margin:28px 0 20px; }
+.play-banner h2 em { font-style:normal; color:var(--lime); }
+.play-banner p { color:#e1e9dc; font-size:14px; }
+.play-banner .tag { background:transparent; color:#def0d0; padding:0; font-size:9px; letter-spacing:.13em; }
+.play-banner .status-dot { background:var(--lime); }
+.play-banner .button { min-height:54px; font-size:15px; padding:15px 23px; }
+.sport-hero-caption { position:absolute; right:26px; top:35px; writing-mode:vertical-rl; font-size:9px; letter-spacing:.2em; color:#fff9; }
+.play-banner .sport-photo-note { left:auto; right:26px; }
+.sport-steps { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; padding:24px; margin-top:18px; border-radius:16px; background:linear-gradient(110deg,#eaffb9,#f5ffe3 65%,#fff); border:1px solid #d9eeac; }
+.sport-steps > div { display:flex; align-items:flex-start; gap:13px; }
+.sport-steps > div > span { color:#164b2d; background:var(--lime); border-radius:50%; min-width:30px; height:30px; display:grid; place-items:center; font-size:11px; font-weight:700; }
+.sport-steps p { font-size:11px; color:var(--muted); margin:0; line-height:1.6; }
+.sport-steps strong { display:block; color:var(--ink); font-size:13px; margin-bottom:4px; }
+.home-quick-links { gap:18px; margin:24px 0 36px; }
+.home-quick-links > a { border-radius:16px; padding:22px; box-shadow:0 6px 24px #174e2010; border-color:#dce8d5; background:#fff; }
+.home-quick-links > a:hover { border-color:#83a36b; }
+.home-tip { background:#f4ffe4; border-color:#d9eeac; }
+.photo-choice { border-radius:18px; box-shadow:none; border-color:var(--line); }
+.choice-arrow { background:var(--lime); color:var(--forest); }
+.choice-photo img { transition:transform .35s; }
+.photo-choice:hover .choice-photo img { transform:scale(1.025); }
+.search-box { border-radius:12px; box-shadow:none; }
+.calendar-panel { border-radius:18px; }
+.calendar-grid button.selected,.time-grid button.selected { background:var(--forest); color:white; border-color:var(--forest); }
+.time-grid button.selected strong,.time-grid button.selected > span { color:white; }
+.time-grid button { border-radius:12px; box-shadow:none; }
+.selected-date { background:#eef4e8; }
+.booking-progress .current span,.booking-progress .done span { background:var(--forest); color:var(--lime); }
+.confirmation-grid.summary-only { grid-template-columns:minmax(0,600px); justify-content:center; }
+.advance-continue { margin-top:20px; min-height:54px; }
+.advance-next-note { color:var(--muted); font-size:12px; line-height:1.6; margin:12px 0 18px; }
+.reservation-share { margin-top:20px; text-align:left; }
+.share-options { margin-top:12px; padding:16px; background:#f5fbe9; border:1px solid #d9e8c7; border-radius:14px; }
+.share-options > p { font-size:13px; line-height:1.6; }
+.share-options textarea { display:block; width:100%; min-width:0; resize:vertical; border:1px solid #ccdac0; border-radius:10px; background:white; padding:12px; font:inherit; font-size:13px; line-height:1.6; color:var(--ink); }
+.share-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.share-actions .button { min-height:44px; font-size:12px; padding:10px 14px; }
+.share-feedback { color:var(--forest); margin:10px 0 0; }
+.reservation-rating { margin-top:20px; padding:18px; border:1px solid #d9e8c7; border-radius:14px; background:#f5fbe9; }
+.reservation-rating p { font-size:12px; line-height:1.6; }
+.rating-stars { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); max-width:244px; gap:4px; margin:12px 0 0; }
+.rating-stars button { width:100%; min-width:0; height:48px; border:1px solid #cad7bd; background:white; color:#687463; font-size:28px; border-radius:10px; cursor:pointer; }
+.rating-stars button.selected { background:var(--lime); border-color:#88ab2b; color:var(--forest); }
+.rating-choice { color:var(--forest); min-height:20px; }
+.rating-thanks,.business-rating { color:var(--forest); font-weight:650; }
+
+/* Operación: densidad moderada, navegación oscura y datos legibles. */
+.ops-nav { background:#143e2e; border:0; border-radius:16px; }
+.ops-nav > .eyebrow { color:#b0c6b4; }
+.ops-nav button { color:#e1ecdf; border-radius:9px; }
+.ops-nav button.active { background:var(--lime); color:#163d29; }
+.ops-side-note { background:#ffffff0b; color:#d5e4d1; border:1px solid #ffffff12; }
+.ops-stats .panel { border-radius:12px; box-shadow:none; border-top:3px solid #c6f36a; }
+.ops-stats strong { color:var(--forest); font-weight:650; }
+.ops-running { border-color:#508648; box-shadow:inset 4px 0 #89bf46; }
+.ops-reservation { border-radius:13px; }
+.ops-time strong { color:#315738; }
+.ops-page input:focus-visible,.ops-page select:focus-visible,.ops-page textarea:focus-visible { outline-color:#30784b; }
+gg-platform-dashboard .platform-shell { background:radial-gradient(ellipse at 100% 0%,#c3f73c65,transparent 55%),radial-gradient(ellipse at 0% 70%,#21c78325,transparent 55%),var(--paper); }
+gg-platform-dashboard .platform-sidebar { background:#123c2c; }
+gg-platform-dashboard .platform-sidebar .brand-go { color:var(--lime); }
+gg-platform-dashboard .platform-sidebar nav a.selected { background:var(--lime); color:#163d29; box-shadow:none; }
+gg-platform-dashboard .platform-edition span { color:var(--lime); }
+gg-platform-dashboard .platform-welcome { background:var(--forest); border-radius:16px; box-shadow:none; }
+gg-platform-dashboard .platform-welcome h2 { color:white; }
+gg-platform-dashboard .platform-welcome p { color:#d3e2cd; }
+gg-platform-dashboard .platform-welcome a { color:var(--lime); }
+gg-platform-dashboard .environment-pill { background:#eef4e8; color:#365939; border-color:#d6e2cd; }
+
+@media(max-width:1050px) {
+  .access-layout { min-height:580px; }
+  .access-story { padding:35px 28px 65px; }
+  .access-story h1 { font-size:43px; }
+  .access-card { padding:28px; }
+  .ops-nav { padding:10px; }
+}
+@media(max-width:700px) {
+  .access-scene { padding:0 18px; min-height:100svh; background:#0b3028; overflow:clip; }
+  .access-scene::before { content:''; position:fixed; inset:0; z-index:-1; pointer-events:none; background:linear-gradient(180deg,#062b2370,#062b23b8),url('/assets/login-estadio.png') 58% center/cover no-repeat; }
+  .access-top { padding:20px 0; gap:12px; }
+  .brand-image,.access-top .brand-image { width:48px; height:48px; border-radius:11px; }
+  .access-top .brand { color:white; }
+  .access-top .brand-go,.access-top .brand-dot { color:var(--lime); }
+  .access-top .brand-mark { background:var(--lime); color:var(--forest); }
+  .access-edition { color:#e6f4de; }
+  .access-layout { display:flex; flex-direction:column; min-height:0; flex:1; justify-content:center; gap:20px; padding:10px 0 26px; margin:0 auto; max-width:420px; border:0; border-radius:0; background:transparent; box-shadow:none; overflow:visible; }
+  .access-story { display:flex; width:100%; padding:0 8px; min-height:0; background:none; }
+  .access-story::after { display:none; }
+  .access-story h1 { font-size:30px; line-height:1.12; letter-spacing:-.035em; margin:12px 0 0; }
+  .access-story > p,.access-story .story-bottom,.access-story .sport-photo-note { display:none; }
+  .access-card { width:100%; max-width:none; min-width:0; padding:24px; border-radius:22px; background:#fffffff0; border:1px solid #ffffffa6; backdrop-filter:blur(14px); box-shadow:0 16px 45px #001d2540; }
+  .access-card .form-intro,.access-card .auth-switch { color:#526c5d; }
+  .session-account div { min-width:0; overflow-wrap:anywhere; }
+  .access-card h2 { font-size:27px; }
+  .glass-card-top { margin-bottom:18px; }
+  .access-footer { font-size:10px; padding:0 0 max(16px,env(safe-area-inset-bottom)); color:#e6f4de; flex-wrap:wrap; justify-content:center; }
+  .access-footer a:hover { color:var(--lime); }
+  .access-footer > div { flex-wrap:wrap; justify-content:center; }
+  .page { padding-left:20px; padding-right:20px; }
+  .home-greeting .eyebrow { font-size:8px; }
+  .booking-progress { gap:10px; justify-content:space-between; }
+  .booking-progress li { gap:5px; font-size:10px; }
+  .booking-progress li > span { width:24px; height:24px; flex-shrink:0; }
+  .play-banner { min-height:410px; }
+  .play-banner-copy { padding:32px 26px 52px; }
+  .play-banner h2 { font-size:43px; }
+  .play-banner p { font-size:13px; }
+  .play-banner-photo { display:block; background:linear-gradient(90deg,#0b3028ed,#0b302890),url('/assets/login-estadio.png') 60% center/cover; }
+  .sport-hero-caption { display:none; }
+  .sport-steps { gap:12px; padding:18px 14px; }
+  .sport-steps > div { flex-direction:column; gap:7px; }
+  .sport-steps strong { font-size:11px; }
+  .sport-steps p { font-size:10px; }
+  .home-quick-links { grid-template-columns:1fr; gap:10px; }
+  .home-quick-links > a { padding:16px; }
+  .ops-nav button { min-width:130px; font-size:12px; padding:12px 10px; }
+}
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition:none!important; animation:none!important; } }

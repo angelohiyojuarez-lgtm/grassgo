@@ -1,0 +1,641 @@
+<section class="business-editor" aria-label="Configuración del negocio">
+  <nav class="editor-steps" aria-label="Pasos de configuración">
+    @for (item of steps; track item.id) {
+      <button
+        type="button"
+        [class.current]="step() === item.id"
+        [attr.aria-current]="step() === item.id ? 'step' : null"
+        (click)="step.set(item.id)"
+        [disabled]="busy()"
+      >
+        <span>{{ item.id }}</span
+        ><gg-icon [name]="item.icon" />{{ item.title }}
+      </button>
+    }
+  </nav>
+  @if (loading()) {
+    <div class="panel" role="status">Cargando la configuración guardada…</div>
+  }
+  @if (error()) {
+    <div class="notice notice-error" role="alert">{{ error() }}</div>
+  }
+  @if (message()) {
+    <div class="notice notice-success" role="status">{{ message() }}</div>
+  }
+  @if (status() === 'published') {
+    <div class="notice">
+      Este negocio está publicado. Para cambiar su operación, suspende primero su acceso desde la
+      ficha de Negocios. Las reservas existentes se conservarán.
+    </div>
+  }
+  <form (submit)="$event.preventDefault(); save()" (ngModelChange)="changed()" novalidate>
+    <fieldset [disabled]="busy() || loading() || loadFailed() || status() === 'published'">
+      @switch (step()) {
+        @case (1) {
+          <section class="panel editor-section">
+            <span class="eyebrow">01 / IDENTIDAD Y UBICACIÓN</span>
+            <h2>Conozcamos el negocio</h2>
+            <p>La dirección y la referencia ayudarán a tus clientes a llegar.</p>
+            <div class="establishment-photo-section">
+              <label for="business-photos"
+                >Fotos del establecimiento *<small
+                  >Esta portada es lo primero que verá el cliente al buscar locales. Es
+                  independiente de las fotos de cada cancha.</small
+                ></label
+              >
+              <input
+                id="business-photos"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                (change)="chooseBusinessImages($event)"
+              />
+              <p class="editor-note">
+                Hasta 5 fotos del local · JPG, PNG o WebP · Máximo 5 MB cada una. Puedes elegir cuál
+                será la portada.
+              </p>
+              <div class="editor-images business-photo-list">
+                @for (image of establishmentImages(); track image.path; let i = $index) {
+                  <figure>
+                    <img
+                      [src]="image.url"
+                      [alt]="
+                        i === 0
+                          ? 'Portada del establecimiento'
+                          : 'Foto ' + (i + 1) + ' del establecimiento'
+                      "
+                    />
+                    @if (i === 0) {
+                      <span class="business-cover-badge">Portada del local</span>
+                    } @else {
+                      <button
+                        type="button"
+                        (click)="makeBusinessCover(i)"
+                        [attr.aria-label]="'Usar foto ' + (i + 1) + ' como portada'"
+                      >
+                        Usar como portada
+                      </button>
+                    }
+                    <button
+                      type="button"
+                      (click)="removeBusinessImage(i)"
+                      [attr.aria-label]="'Quitar foto ' + (i + 1) + ' del establecimiento'"
+                    >
+                      Quitar foto
+                    </button>
+                  </figure>
+                } @empty {
+                  <div class="business-photo-empty">
+                    <gg-icon name="building" /><span
+                      >Agrega una foto de la fachada o una vista general del establecimiento.</span
+                    >
+                  </div>
+                }
+              </div>
+            </div>
+            <div class="editor-grid">
+              <label
+                >Nombre del negocio *<input
+                  name="businessName"
+                  [(ngModel)]="config.name"
+                  (ngModelChange)="changed()"
+                  maxlength="100"
+                  autocomplete="organization"
+                  placeholder="Nombre del establecimiento"
+              /></label>
+              <label
+                >Teléfono de contacto<input
+                  name="businessPhone"
+                  [(ngModel)]="config.phone"
+                  (ngModelChange)="changed()"
+                  type="tel"
+                  maxlength="20"
+                  placeholder="Número de contacto del local"
+              /></label>
+              <label
+                >Distrito *<input
+                  name="district"
+                  [(ngModel)]="config.district"
+                  (ngModelChange)="changed()"
+                  list="district-options"
+                  maxlength="80"
+                  placeholder="Elige o escribe el distrito"
+                  autocomplete="address-level2"
+                /><datalist id="district-options">
+                  @for (district of districts; track district) {
+                    <option [value]="district"></option>
+                  }</datalist
+                ><small>Andahuaylas, San Jerónimo, Talavera u otro distrito.</small></label
+              >
+              <label
+                >Dirección exacta *<input
+                  name="address"
+                  [(ngModel)]="config.address"
+                  (ngModelChange)="changed()"
+                  maxlength="200"
+                  autocomplete="street-address"
+                  placeholder="Avenida, calle, número o sector"
+              /></label>
+              <label class="span-two"
+                >Referencia del local<input
+                  name="reference"
+                  [(ngModel)]="config.reference"
+                  (ngModelChange)="changed()"
+                  maxlength="300"
+                  placeholder="Por ejemplo: frente a la plaza o a una cuadra del colegio…"
+              /></label>
+              <label class="span-two"
+                >Descripción<textarea
+                  name="description"
+                  [(ngModel)]="config.description"
+                  (ngModelChange)="changed()"
+                  maxlength="1000"
+                  rows="3"
+                  placeholder="Información útil y real sobre el establecimiento"
+                ></textarea>
+              </label>
+              <label class="span-two"
+                >Correo del administrador responsable *<input
+                  name="adminEmail"
+                  [(ngModel)]="config.adminEmail"
+                  (ngModelChange)="changed()"
+                  type="email"
+                  maxlength="254"
+                  autocomplete="off"
+                  placeholder="Correo de una cuenta ya registrada en GrassGo"
+                /><small
+                  >Al publicar, esta cuenta recibirá acceso administrativo a este negocio. Debe
+                  estar activa y tener su correo verificado.</small
+                ></label
+              >
+            </div>
+          </section>
+        }
+        @case (2) {
+          <section class="panel editor-section">
+            <span class="eyebrow">02 / ATENCIÓN AL PÚBLICO</span>
+            <h2>¿Cuándo abre el local?</h2>
+            <p>
+              Elige los días y un horario común para sus canchas. Los clientes solo podrán solicitar
+              bloques dentro de este horario.
+            </p>
+            <label>Días de atención *</label>
+            <div class="editor-days" role="group" aria-label="Días de atención">
+              @for (day of weekdays; track day.id) {
+                <button
+                  type="button"
+                  [class.active]="config.days.includes(day.id)"
+                  [attr.aria-pressed]="config.days.includes(day.id)"
+                  (click)="toggleDay(day.id)"
+                >
+                  {{ day.name }}
+                </button>
+              }
+            </div>
+            <div class="editor-grid">
+              <label
+                >Hora de apertura *<select
+                  name="openHour"
+                  [(ngModel)]="config.openHour"
+                  (ngModelChange)="changed()"
+                >
+                  <option [ngValue]="null">Seleccionar</option>
+                  @for (hour of hours.slice(0, 24); track hour) {
+                    <option [ngValue]="hour">{{ hourLabel(hour) }}</option>
+                  }
+                </select></label
+              >
+              <label
+                >Hora de cierre *<select
+                  name="closeHour"
+                  [(ngModel)]="config.closeHour"
+                  (ngModelChange)="changed()"
+                >
+                  <option [ngValue]="null">Seleccionar</option>
+                  @for (hour of hours.slice(1); track hour) {
+                    <option [ngValue]="hour">
+                      {{ hour === 24 ? '24:00 · Medianoche' : hourLabel(hour) }}
+                    </option>
+                  }
+                </select></label
+              >
+            </div>
+            <div class="notice">
+              Las reservas actuales son de una hora completa. El horario debe comenzar y terminar en
+              horas exactas, dentro del mismo día; para cerrar a medianoche elige 24:00.
+            </div>
+          </section>
+        }
+        @case (3) {
+          <section class="panel editor-section">
+            <span class="eyebrow">03 / ESPACIOS Y TARIFAS</span>
+            <h2>Una ficha para cada cancha</h2>
+            <p>Cada cancha puede tener un deporte, superficie, fotografías y tarifas diferentes.</p>
+            <div class="court-count">
+              <label
+                >Número de canchas *<input
+                  name="courtCount"
+                  type="number"
+                  [(ngModel)]="courtCount"
+                  min="1"
+                  max="20"
+                  step="1" /></label
+              ><button type="button" class="button button-outline" (click)="resizeCourts()">
+                Actualizar fichas
+              </button>
+            </div>
+            @if (courtCount < config.courts.length) {
+              <div class="notice">
+                Al actualizar se quitarán del borrador las últimas
+                {{ config.courts.length - courtCount }} fichas. Las imágenes guardadas no se borran.
+              </div>
+            }
+          </section>
+          @for (court of config.courts; track court.id; let i = $index) {
+            <section class="panel editor-section court-editor">
+              <div class="court-editor-heading">
+                <span class="quick-icon"><gg-icon name="field" /></span>
+                <div>
+                  <span class="eyebrow">CANCHA {{ i + 1 }}</span>
+                  <h2>{{ court.name }}</h2>
+                </div>
+              </div>
+              <div class="editor-grid">
+                <label
+                  >Nombre de la cancha *<input
+                    [name]="'courtName' + court.id"
+                    [(ngModel)]="court.name"
+                    (ngModelChange)="changed()"
+                    maxlength="80"
+                /></label>
+                <label
+                  >Tipo de cancha *<select
+                    [name]="'courtSport' + court.id"
+                    [(ngModel)]="court.sport"
+                    (ngModelChange)="changed()"
+                  >
+                    <option value="">Seleccionar deporte</option>
+                    <option>Fútbol</option>
+                    <option>Vóley</option>
+                    <option>Multiuso</option>
+                  </select></label
+                >
+                <label
+                  >Superficie *<select
+                    [name]="'courtSurface' + court.id"
+                    [(ngModel)]="court.surface"
+                    (ngModelChange)="changed()"
+                  >
+                    <option value="">Seleccionar superficie</option>
+                    <option>Grass sintético</option>
+                    <option>Losa deportiva</option>
+                    <option>Arena</option>
+                    <option>Otro</option>
+                  </select></label
+                >
+                <label
+                  >Tarifa de día por hora (S/) *<input
+                    [name]="'dayPrice' + court.id"
+                    type="number"
+                    [ngModel]="court.dayPriceCents === null ? null : court.dayPriceCents / 100"
+                    (ngModelChange)="court.dayPriceCents = cents($event); changed()"
+                    min="10"
+                    max="10000"
+                    step="0.01"
+                    placeholder="0.00"
+                /></label>
+                <label
+                  >Tarifa de noche por hora (S/) *<input
+                    [name]="'nightPrice' + court.id"
+                    type="number"
+                    [ngModel]="court.nightPriceCents === null ? null : court.nightPriceCents / 100"
+                    (ngModelChange)="court.nightPriceCents = cents($event); changed()"
+                    min="10"
+                    max="10000"
+                    step="0.01"
+                    placeholder="0.00"
+                /></label>
+                <label
+                  >La tarifa nocturna comienza a las *<select
+                    [name]="'nightStart' + court.id"
+                    [(ngModel)]="court.nightStartsAt"
+                    (ngModelChange)="changed()"
+                  >
+                    <option [ngValue]="null">Seleccionar</option>
+                    @for (hour of hours.slice(0, 24); track hour) {
+                      <option [ngValue]="hour">{{ hourLabel(hour) }}</option>
+                    }</select
+                  ><small
+                    >Si la tarifa es única, coloca el mismo precio de día y de noche.</small
+                  ></label
+                >
+              </div>
+              <label [for]="'courtPhotos' + court.id"
+                >Fotos de esta cancha *
+                <small>Hasta 3 imágenes · JPG, PNG o WebP · 5 MB cada una</small></label
+              ><input
+                [id]="'courtPhotos' + court.id"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                (change)="chooseImages($event, court)"
+              />
+              <div class="editor-images">
+                @for (image of images(court); track image.path; let index = $index) {
+                  <figure>
+                    <img
+                      [src]="image.url"
+                      [alt]="'Foto ' + (index + 1) + ' de ' + court.name"
+                    /><button
+                      type="button"
+                      (click)="removeImage(court, index)"
+                      [attr.aria-label]="'Quitar foto ' + (index + 1) + ' de ' + court.name"
+                    >
+                      Quitar
+                    </button>
+                  </figure>
+                }
+              </div>
+              <p class="editor-note">
+                La primera foto será la portada de esta cancha. Usa fotografías reales del lugar.
+              </p>
+            </section>
+          }
+        }
+        @case (4) {
+          <section class="panel editor-section">
+            <span class="eyebrow">04 / RESERVAS Y PAGOS</span>
+            <h2>Todo claro antes de reservar</h2>
+            <div class="fixed-advance">
+              <gg-icon name="shield" />
+              <div><span>Adelanto para todos los negocios</span><strong>S/ 10</strong></div>
+              <small>El cliente paga el saldo pendiente en el local.</small>
+            </div>
+            <div class="editor-grid">
+              <label
+                >Plazo para enviar el comprobante (minutos) *<input
+                  name="holdMinutes"
+                  type="number"
+                  [(ngModel)]="config.holdMinutes"
+                  (ngModelChange)="changed()"
+                  min="1"
+                  max="1440"
+                  step="1"
+                  placeholder="Elige el plazo del negocio"
+                /><small
+                  >Mientras esté vigente, el horario queda retenido. El plazo también limita la
+                  revisión: vencido, ya no puede confirmarse el pago.</small
+                ></label
+              >
+              <label
+                >Modo de pago<select
+                  name="paymentMode"
+                  [(ngModel)]="config.payment.mode"
+                  (ngModelChange)="changed()"
+                >
+                  <option value="live">Datos del propietario</option>
+                  @if (demo) {
+                    <option value="demo">Demostración local · no pagar</option>
+                  }
+                </select></label
+              >
+            </div>
+            <label>Métodos aceptados *</label>
+            <div class="editor-days" role="group" aria-label="Métodos de pago">
+              @for (method of ['Yape', 'Plin']; track method) {
+                <button
+                  type="button"
+                  [class.active]="config.payment.methods.includes(method)"
+                  [attr.aria-pressed]="config.payment.methods.includes(method)"
+                  (click)="toggleMethod(method)"
+                >
+                  {{ method }}
+                </button>
+              }
+            </div>
+            @if (config.payment.mode === 'live') {
+              <div class="editor-grid">
+                <label
+                  >Nombre del titular de pago *<input
+                    name="paymentRecipient"
+                    [(ngModel)]="config.payment.recipient"
+                    (ngModelChange)="changed()"
+                    maxlength="100"
+                    placeholder="Titular que aparece al pagar" /></label
+                ><label
+                  >Número de Yape / Plin *<input
+                    name="paymentPhone"
+                    [(ngModel)]="config.payment.phone"
+                    (ngModelChange)="changed()"
+                    type="tel"
+                    maxlength="20"
+                    placeholder="Número del propietario"
+                /></label>
+              </div>
+              <label for="businessQr"
+                >Código QR de pago *<small
+                  >Sube el QR que corresponda al titular y a los métodos indicados.</small
+                ></label
+              ><input
+                id="businessQr"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                (change)="chooseImages($event)"
+              />
+              @if (qr(); as image) {
+                <div class="editor-qr">
+                  <img [src]="image.url" alt="Vista previa del código QR del propietario" />
+                </div>
+              }
+            } @else {
+              <div class="notice">
+                Se utilizará el QR de demostración de GrassGo. No permite pagar y solo puede
+                publicarse en los emuladores locales.
+              </div>
+            }
+            <div class="notice">
+              Subir un comprobante no confirma dinero recibido. El administrador debe verificar el
+              ingreso real antes de confirmar la reserva.
+            </div>
+          </section>
+        }
+        @case (5) {
+          <section class="panel editor-section">
+            <span class="eyebrow">05 / REVISIÓN FINAL</span>
+            <h2>{{ config.name || 'Tu nuevo negocio' }}</h2>
+            <div
+              class="business-client-preview"
+              aria-label="Vista previa de la tarjeta del cliente"
+            >
+              <span class="eyebrow">ASÍ LO VERÁ EL CLIENTE</span>
+              @if (establishmentImages()[0]; as cover) {
+                <img
+                  class="business-preview-cover"
+                  [src]="cover.url"
+                  alt="Portada del establecimiento en la tarjeta de cliente"
+                />
+              } @else {
+                <div class="business-photo-empty">Foto de portada pendiente</div>
+              }
+              <div class="business-preview-content">
+                <h3>{{ config.name || 'Nombre del establecimiento' }}</h3>
+                <p>
+                  <gg-icon name="pin" /> {{ config.address || 'Dirección pendiente' }} ·
+                  {{ config.district || 'Distrito pendiente' }}
+                </p>
+                <div class="choice-chips">
+                  <span>{{ config.courts.length }} cancha(s)</span>
+                  @if (sports()) {
+                    <span>{{ sports() }}</span>
+                  }
+                  <span>Adelanto S/ 10</span>
+                </div>
+              </div>
+            </div>
+            <p>{{ config.address }} · {{ config.district }}</p>
+            @if (config.reference) {
+              <p>Referencia: {{ config.reference }}</p>
+            }
+            @if (config.description) {
+              <p>{{ config.description }}</p>
+            }
+            @if (config.phone) {
+              <p>Contacto del local: {{ config.phone }}</p>
+            }
+            @if (config.days.length) {
+              <p>Días de atención: {{ attentionDays() }}</p>
+            }
+            <div class="editor-review">
+              <div>
+                <span>Canchas</span><strong>{{ config.courts.length }}</strong>
+              </div>
+              <div><span>Adelanto</span><strong>S/ 10</strong></div>
+              <div>
+                <span>Comprobante</span
+                ><strong>{{
+                  config.holdMinutes === null ? 'Por definir' : config.holdMinutes + ' min'
+                }}</strong>
+              </div>
+              <div>
+                <span>Horario</span
+                ><strong
+                  >{{ config.openHour === null ? '—' : hourLabel(config.openHour) }} –
+                  {{ config.closeHour === null ? '—' : hourLabel(config.closeHour) }}</strong
+                >
+              </div>
+            </div>
+            @for (court of config.courts; track court.id) {
+              <div class="editor-review-court">
+                <strong>{{ court.name }}</strong
+                ><span
+                  >{{ court.sport || 'Deporte pendiente' }} ·
+                  {{ court.surface || 'Superficie pendiente' }}</span
+                ><small
+                  >Día S/ {{ court.dayPriceCents === null ? '—' : court.dayPriceCents / 100 }} ·
+                  Noche S/
+                  {{ court.nightPriceCents === null ? '—' : court.nightPriceCents / 100 }} ·
+                  {{ images(court).length }} foto(s)</small
+                >
+              </div>
+            }
+            <p>
+              Administrador: <strong>{{ config.adminEmail || 'Por asignar' }}</strong>
+            </p>
+            @if (missing().length) {
+              <div class="editor-checklist">
+                <h3>Falta completar antes de publicar</h3>
+                <ul>
+                  @for (item of missing(); track item) {
+                    <li>{{ item }}</li>
+                  }
+                </ul>
+              </div>
+            } @else {
+              <div class="notice notice-success">
+                El formulario está completo. Al publicar, el servidor volverá a verificar imágenes,
+                permisos y la cuenta del administrador.
+              </div>
+            }
+            @if (!saved()) {
+              <div class="notice">
+                Guarda el borrador antes de publicar. Los cambios actuales todavía no están
+                guardados.
+              </div>
+            }
+            @if (status() !== 'published') {
+              <button
+                type="button"
+                class="button button-primary"
+                [disabled]="!saved() || missing().length > 0 || busy() || status() === 'suspended'"
+                (click)="publishConfirm.set(true)"
+              >
+                Preparar publicación <gg-icon name="arrow" />
+              </button>
+            }
+          </section>
+        }
+      }
+      <div class="editor-bottom">
+        <div>
+          <a routerLink="/superadmin/negocios" class="text-button">Volver a negocios</a
+          ><span>{{
+            status() === 'published'
+              ? 'Publicado'
+              : saved()
+                ? 'Borrador guardado'
+                : 'Cambios sin guardar'
+          }}</span>
+        </div>
+        <div>
+          @if (step() > 1) {
+            <button type="button" class="button button-outline" (click)="step.set(step() - 1)">
+              Anterior
+            </button>
+          }
+          <button
+            type="submit"
+            class="button button-outline"
+            [disabled]="busy() || status() === 'published'"
+          >
+            {{ busy() ? progress() || 'Guardando…' : 'Guardar borrador' }}
+          </button>
+          @if (step() < 5) {
+            <button type="button" class="button button-primary" (click)="step.set(step() + 1)">
+              Continuar <gg-icon name="arrow" />
+            </button>
+          }
+        </div>
+      </div>
+    </fieldset>
+  </form>
+  @if (publishConfirm()) {
+    <section class="panel publish-confirm" aria-label="Confirmar publicación">
+      <h2>Publicar {{ config.name }}</h2>
+      <p>
+        Las canchas aparecerán a los clientes y <strong>{{ config.adminEmail }}</strong> recibirá
+        acceso administrativo a este negocio. Las reservas exigirán un adelanto de S/ 10.
+      </p>
+      <label class="verification-checkbox"
+        ><input #verified type="checkbox" /> Revisé horarios, tarifas, fotos, titular y QR del
+        negocio.</label
+      >
+      <div class="detail-actions">
+        <button
+          type="button"
+          class="button button-primary"
+          [disabled]="!verified.checked || busy()"
+          (click)="publish()"
+        >
+          {{ busy() ? 'Verificando y publicando…' : 'Confirmar publicación' }}</button
+        ><button
+          type="button"
+          class="button button-outline"
+          [disabled]="busy()"
+          (click)="publishConfirm.set(false)"
+        >
+          Cancelar
+        </button>
+      </div>
+    </section>
+  }
+</section>

@@ -1,0 +1,321 @@
+:host {
+  display: block;
+}
+.local-schedule {
+  --local-surface: color-mix(in srgb, var(--paper) 95%, var(--ink) 5%);
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+.local-heading {
+  margin-bottom: 24px;
+}
+h2 {
+  font-size: clamp(27px, 3vw, 34px);
+  margin: 8px 0;
+  line-height: 1.3;
+}
+h3 {
+  font-size: 25px;
+  line-height: 1.35;
+  margin: 0 0 6px;
+}
+h4 {
+  font-size: 21px;
+  line-height: 1.4;
+  margin: 0 0 12px;
+}
+p {
+  margin: 0 0 16px;
+}
+.eyebrow {
+  font-size: 14px;
+  color: var(--muted);
+}
+.schedule-section {
+  padding: 28px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  background: var(--local-surface);
+}
+.section-title {
+  display: flex;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 24px;
+}
+.section-title p,
+.help,
+.optional {
+  color: var(--muted);
+  font-size: 16px;
+}
+.section-title p {
+  margin: 0;
+}
+.step-number {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 50%;
+  background: var(--forest);
+  color: #fff;
+  font-size: 21px;
+  font-weight: 800;
+}
+.schedule-policy {
+  display: flex;
+  align-items: start;
+  gap: 14px;
+  padding: 20px;
+  font-size: 17px;
+}
+.schedule-policy p {
+  margin: 0;
+}
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 21px;
+  font-weight: 750;
+}
+label {
+  display: block;
+  color: var(--ink);
+  margin: 20px 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+input,
+select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 58px;
+  padding: 13px 16px;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 18px;
+}
+:is(button, input, select):focus-visible {
+  outline: 3px solid var(--green);
+  outline-offset: 4px;
+}
+.button,
+.weekday {
+  min-height: 56px;
+  padding: 14px 20px;
+  font-size: 17px;
+  border-radius: 15px;
+  line-height: 1.4;
+  white-space: normal;
+}
+.button {
+  display: inline-flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+}
+.button-primary {
+  min-height: 62px;
+  font-size: 18px;
+}
+.button-outline {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+}
+button:disabled,
+fieldset:disabled {
+  opacity: 0.65;
+}
+.day-actions,
+.confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 18px 0;
+}
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+  gap: 12px;
+  margin: 16px 0 24px;
+}
+.weekday {
+  display: grid;
+  gap: 5px;
+  border: 2px solid var(--line);
+  color: var(--ink);
+  background: var(--paper);
+  text-align: left;
+  cursor: pointer;
+}
+.weekday strong {
+  font-size: 18px;
+}
+.weekday span {
+  font-size: 16px;
+  color: var(--muted);
+}
+.weekday.selected {
+  border-color: var(--green);
+  background: color-mix(in srgb, var(--green) 10%, var(--paper));
+  box-shadow: inset 0 -3px var(--green);
+}
+.hour-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.hour-fields label {
+  margin: 0;
+}
+.schedule-summary {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+  padding: 20px;
+  border-block: 1px solid var(--line);
+  margin: 22px 0;
+  font-size: 18px;
+}
+.save-button {
+  min-width: 220px;
+}
+.setup-help {
+  margin-top: 20px;
+  margin-bottom: 0;
+}
+.notice {
+  font-size: 17px;
+  margin: 18px 0;
+  padding: 18px;
+  overflow-wrap: anywhere;
+}
+.close-confirm {
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  padding: 24px;
+  margin: 20px 0;
+}
+.date-emphasis {
+  display: block;
+  font-size: 23px;
+  line-height: 1.4;
+  margin-bottom: 18px;
+  color: var(--ink);
+  text-transform: capitalize;
+}
+.confirmation-actions {
+  margin-bottom: 0;
+}
+.confirmation-actions .button {
+  flex: 1 1 200px;
+}
+.closed-list {
+  display: grid;
+  gap: 18px;
+  margin-top: 22px;
+}
+.closed-date {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+}
+.closed-date > div {
+  min-width: 0;
+}
+.closed-date h4 {
+  margin: 12px 0 8px;
+  text-transform: capitalize;
+}
+.closed-date p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.closed-date .tag {
+  font-size: 15px;
+  padding: 8px 12px;
+  color: var(--ink);
+  background: var(--paper);
+}
+.closed-date .button {
+  flex-shrink: 0;
+}
+.closed-empty {
+  text-align: center;
+  padding: 28px 12px;
+}
+.closed-empty gg-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+.closed-empty p {
+  font-size: 19px;
+  margin-bottom: 5px;
+}
+.closed-empty span {
+  color: var(--muted);
+}
+.schedule-loading {
+  padding: 28px;
+  font-size: 18px;
+}
+@media (max-width: 650px) {
+  .schedule-section {
+    padding: 22px 18px;
+  }
+  .section-title {
+    gap: 12px;
+  }
+  h3 {
+    font-size: 23px;
+  }
+  .weekdays {
+    grid-template-columns: 1fr 1fr;
+  }
+  .weekday {
+    padding: 15px 13px;
+  }
+  .hour-fields {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .day-actions .button {
+    flex: 1 1 130px;
+  }
+  .save-button,
+  .refresh-dates {
+    width: 100%;
+    min-width: 0;
+  }
+  .close-confirm {
+    padding: 20px 16px;
+  }
+  .date-emphasis {
+    font-size: 22px;
+  }
+  .closed-date {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .closed-date .button {
+    width: 100%;
+  }
+}

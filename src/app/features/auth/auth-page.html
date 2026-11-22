@@ -1,0 +1,236 @@
+<section class="access-scene" [class.staff-access]="portal() !== 'client'">
+  <div class="access-top">
+    <a class="brand" [routerLink]="loginPath()"
+      ><img
+        class="brand-image"
+        src="/assets/brand/grassgo-logo.png"
+        alt=""
+        width="64"
+        height="64"
+      />grass<span class="brand-go">go<span class="brand-dot">.</span></span></a
+    ><span class="access-edition">{{
+      portal() === 'client' ? 'ENCUENTRA TU JUEGO' : portalName()
+    }}</span>
+  </div>
+  <div class="access-layout">
+    <div class="access-story">
+      <span class="access-kicker"><span></span> {{ portalName() }}</span>
+      <h1>
+        {{ portal() === 'client' ? 'TU EQUIPO.' : portal() === 'admin' ? 'TU LOCAL.' : 'UNA RED.'
+        }}<br />{{
+          portal() === 'client'
+            ? 'TU CANCHA.'
+            : portal() === 'admin'
+              ? 'TU CONTROL.'
+              : 'MIL PARTIDOS.'
+        }}<br /><em>{{ portal() === 'client' ? 'TU MOMENTO.' : 'TODO CONECTADO.' }}</em>
+      </h1>
+      <p>
+        {{
+          portal() === 'client'
+            ? 'Organiza menos. Juega más. Encuentra tu cancha y prepara la próxima pichanga desde tu celular.'
+            : portal() === 'admin'
+              ? 'Un espacio exclusivo para administrar los establecimientos que tienes asignados.'
+              : 'El centro de control de GrassGo. Acceso exclusivo para la administración de la plataforma.'
+        }}
+      </p>
+      <div class="story-bottom">
+        <span class="story-field"><gg-icon name="field" /></span>
+        <div>
+          <strong>{{
+            portal() === 'client' ? 'La próxima empieza contigo.' : 'Cada acceso tiene su lugar.'
+          }}</strong
+          ><span>{{
+            portal() === 'client'
+              ? 'Elige tu local. Encuentra tu hora.'
+              : 'Permisos verificados para cada cuenta'
+          }}</span>
+        </div>
+      </div>
+      <div class="access-club-seal" aria-hidden="true">GG<span>HECHO PARA JUGAR</span></div>
+      <span class="sport-photo-note">Fotografía deportiva de referencia</span>
+    </div>
+    <div class="access-card">
+      <div class="glass-card-top">
+        <span class="form-symbol"
+          ><gg-icon [name]="portal() === 'client' ? 'user' : 'shield'" /></span
+        ><span class="glass-badge">{{
+          portal() === 'client' ? 'BIENVENIDO A GRASSGO' : 'ACCESO EXCLUSIVO'
+        }}</span>
+      </div>
+      <h2>
+        {{
+          mode() === 'register'
+            ? 'Empieza a jugar.'
+            : mode() === 'reset'
+              ? 'Recupera tu acceso.'
+              : portal() === 'client'
+                ? 'Qué bueno verte.'
+                : 'Bienvenido de nuevo.'
+        }}
+      </h2>
+      <p class="form-intro">
+        {{
+          mode() === 'register'
+            ? 'Tu próxima pichanga empieza con una cuenta.'
+            : mode() === 'reset'
+              ? 'Te enviaremos un enlace para crear una nueva contraseña.'
+              : 'Ingresa tus datos para continuar.'
+        }}
+      </p>
+      @if (denied) {
+        <div class="notice notice-error" role="alert">
+          {{
+            denied === 'denied'
+              ? 'Esta cuenta no tiene permisos para entrar a esta sección.'
+              : 'No pudimos comprobar tus permisos. Intenta nuevamente.'
+          }}
+        </div>
+      }
+      @if (error()) {
+        <div class="notice notice-error" role="alert">{{ error() }}</div>
+      }
+      @if (auth.user() && mode() !== 'reset') {
+        <div class="session-account">
+          <gg-icon name="check" />
+          <div>
+            <strong>Ya tienes una sesión iniciada</strong><span>{{ auth.user()?.email }}</span>
+          </div>
+        </div>
+        <button class="button button-primary button-full" (click)="continue()" [disabled]="busy()">
+          {{ busy() ? 'Comprobando acceso…' : 'Continuar' }}<gg-icon name="arrow" /></button
+        ><button class="text-button button-full" (click)="switchAccount()" [disabled]="busy()">
+          Usar otra cuenta
+        </button>
+      } @else {
+        <form #form="ngForm" (ngSubmit)="submit(form)" novalidate [attr.aria-busy]="busy()">
+          <fieldset [disabled]="busy()">
+            @if (mode() === 'register') {
+              <label for="auth-name">Tu nombre</label
+              ><input
+                id="auth-name"
+                name="name"
+                [(ngModel)]="name"
+                #nameField="ngModel"
+                required
+                minlength="2"
+                maxlength="80"
+                autocomplete="name"
+                placeholder="¿Cómo te llamas?"
+                [attr.aria-invalid]="nameField.touched && nameField.invalid"
+              />
+              @if (nameField.touched && nameField.invalid) {
+                <small class="field-error">Escribe tu nombre, entre 2 y 80 caracteres.</small>
+              }
+            }
+            <label for="auth-email">Correo electrónico</label>
+            <div class="input-with-icon">
+              <gg-icon name="mail" /><input
+                id="auth-email"
+                name="email"
+                [(ngModel)]="email"
+                #emailField="ngModel"
+                type="email"
+                email
+                required
+                maxlength="254"
+                autocomplete="email"
+                inputmode="email"
+                autocapitalize="none"
+                spellcheck="false"
+                placeholder="tu@correo.com"
+                [attr.aria-invalid]="emailField.touched && emailField.invalid"
+              />
+            </div>
+            @if (emailField.touched && emailField.invalid) {
+              <small class="field-error">Escribe un correo electrónico válido.</small>
+            }
+            @if (mode() !== 'reset') {
+              <div class="label-row">
+                <label for="auth-password">Contraseña</label>
+                @if (mode() === 'login') {
+                  <a [routerLink]="resetPath()">¿La olvidaste?</a>
+                }
+              </div>
+              <div class="password-field">
+                <input
+                  id="auth-password"
+                  name="password"
+                  [(ngModel)]="password"
+                  #passwordField="ngModel"
+                  [type]="visible() ? 'text' : 'password'"
+                  required
+                  [minlength]="mode() === 'register' ? 8 : 1"
+                  maxlength="128"
+                  [autocomplete]="mode() === 'register' ? 'new-password' : 'current-password'"
+                  [placeholder]="
+                    mode() === 'register' ? 'Mínimo 8 caracteres' : 'Ingresa tu contraseña'
+                  "
+                  [attr.aria-invalid]="passwordField.touched && passwordField.invalid"
+                /><button
+                  type="button"
+                  (click)="visible.set(!visible())"
+                  [attr.aria-label]="visible() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  [attr.aria-pressed]="visible()"
+                >
+                  <gg-icon name="eye" />
+                </button>
+              </div>
+              @if (mode() === 'register') {
+                <small [class.field-error]="passwordField.touched && passwordField.invalid"
+                  >Usa al menos 8 caracteres.</small
+                >
+              }
+            }
+            @if (success()) {
+              <div class="notice notice-success" role="status">{{ success() }}</div>
+            }
+            <button
+              type="submit"
+              class="button button-primary button-full access-submit"
+              [disabled]="busy()"
+            >
+              {{
+                busy()
+                  ? 'Un momento…'
+                  : mode() === 'register'
+                    ? 'Crear mi cuenta'
+                    : mode() === 'reset'
+                      ? 'Enviar enlace'
+                      : 'Ingresar'
+              }}<gg-icon name="arrow" />
+            </button>
+          </fieldset>
+        </form>
+      }
+      @if (portal() === 'client' || mode() === 'reset') {
+        <p class="auth-switch">
+          {{ mode() === 'login' ? '¿Todavía no tienes cuenta?' : '¿Ya tienes una cuenta?' }}
+          <a
+            [routerLink]="mode() === 'login' ? '/registro' : loginPath()"
+            queryParamsHandling="preserve"
+            >{{ mode() === 'login' ? 'Regístrate' : 'Inicia sesión' }}</a
+          >
+        </p>
+      }
+      <div class="access-security">
+        <gg-icon name="shield" /><span>{{
+          portal() === 'client'
+            ? 'Tu cuenta es personal. Tu próximo partido también.'
+            : 'Tus permisos se comprueban antes de ingresar.'
+        }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="access-footer">
+    <span>© {{ 2026 }} GrassGo</span>
+    @if (portal() === 'client') {
+      <div>
+        <a routerLink="/admin/ingresar">Administrar mi local</a><span>·</span
+        ><a routerLink="/superadmin/ingresar">Plataforma</a>
+      </div>
+    } @else if (portal() !== 'superadmin') {
+      <a routerLink="/ingresar"><gg-icon name="back" /> Acceso de clientes</a>
+    }
+  </div>
+</section>

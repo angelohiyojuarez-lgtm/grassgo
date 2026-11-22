@@ -1,0 +1,734 @@
+<div class="platform-shell">
+  <aside class="platform-sidebar">
+    <a
+      class="brand"
+      routerLink="/superadmin/inicio"
+      aria-label="GrassGo, resumen de superadministración"
+      ><img
+        class="brand-image"
+        src="/assets/brand/grassgo-logo.png"
+        alt=""
+        width="64"
+        height="64"
+      />grass<span class="brand-go">go.</span></a
+    >
+    <div class="platform-edition">GRASSGO HQ <span>SUPERADMIN</span></div>
+    <p class="nav-label">PLATAFORMA</p>
+    <nav aria-label="Superadministración">
+      @for (item of navigation(); track item.path) {
+        <a
+          [routerLink]="item.path"
+          routerLinkActive="selected"
+          [routerLinkActiveOptions]="{ exact: true }"
+          ariaCurrentWhenActive="page"
+          ><gg-icon [name]="item.icon" />{{ item.title }}</a
+        >
+      }
+    </nav>
+    <div class="sidebar-bottom">
+      <span class="sidebar-avatar"><gg-icon name="shield" /></span>
+      <div>
+        <strong>Superadministrador</strong><small>{{ auth.user()?.email }}</small>
+      </div>
+    </div>
+    <button class="sidebar-logout" (click)="logout()" [disabled]="busy()">
+      <gg-icon name="logout" /> Cerrar sesión
+    </button>
+  </aside>
+  <div class="platform-workspace">
+    <header class="platform-topbar">
+      <span
+        >Plataforma <gg-icon name="chevron" /> <strong>{{ title() }}</strong></span
+      ><gg-notification-center /><span class="environment-pill">{{
+        demo ? 'Entorno de pruebas' : 'Administración privada'
+      }}</span>
+    </header>
+    <div class="platform-content">
+      <div class="platform-heading">
+        <div>
+          <span class="eyebrow">GRASSGO / SUPERADMINISTRACIÓN</span>
+          <h1>{{ title() }}</h1>
+          <p>
+            {{
+              section() === 'nuevo'
+                ? 'El siguiente negocio de tu comunidad empieza aquí.'
+                : 'Un solo espacio para organizar el crecimiento de GrassGo.'
+            }}
+          </p>
+        </div>
+        @if (section() !== 'nuevo') {
+          <div class="detail-actions platform-heading-actions">
+            <button class="button button-primary" (click)="refresh()" [disabled]="loading()">
+              <gg-icon name="activity" /> {{ loading() ? 'Actualizando…' : 'Actualizar datos' }}
+            </button>
+            <a class="button button-outline" routerLink="/superadmin/negocios/nuevo"
+              ><gg-icon name="plus" /> Agregar negocio</a
+            >
+          </div>
+        }
+      </div>
+      @if (message()) {
+        <div class="notice notice-success platform-message" role="status">
+          {{ message()
+          }}<button class="text-button" (click)="message.set('')" aria-label="Cerrar mensaje">
+            Cerrar
+          </button>
+        </div>
+      }
+      @if (error()) {
+        <div class="notice notice-error" role="alert">
+          {{ error() }}
+          <button class="text-button" (click)="refresh()" [disabled]="loading()">Reintentar</button>
+        </div>
+      }
+
+      @switch (section()) {
+        @case ('resumen') {
+          <section class="platform-welcome">
+            <div>
+              <span class="welcome-label">TU PLATAFORMA, EN UN SOLO LUGAR</span>
+              <h2>TUS NEGOCIOS.<br /><em>TODO MÁS CLARO.</em></h2>
+              <p>
+                Consulta los negocios reales, revisa qué les falta y comprueba cuáles reciben
+                reservas.
+              </p>
+              <a routerLink="/superadmin/negocios">Gestionar negocios <gg-icon name="arrow" /></a>
+            </div>
+            <div class="welcome-art" aria-hidden="true">
+              <gg-icon name="building" /><span class="art-orbit"></span>
+            </div>
+          </section>
+          <div class="platform-metrics" aria-label="Resumen real de GrassGo">
+            <article class="panel">
+              <span><gg-icon name="building" /> Negocios</span
+              ><strong>{{
+                canViewMetrics() ? (overview()?.totalBusinessCount ?? venues().length) : '—'
+              }}</strong
+              ><small>Registrados en GrassGo</small>
+            </article>
+            <article class="panel">
+              <span><gg-icon name="grid" /> Canchas</span
+              ><strong>{{ canViewMetrics() ? (overview()?.totals?.courts ?? '—') : '—' }}</strong
+              ><small>En los negocios cargados</small>
+            </article>
+            <article class="panel">
+              <span><gg-icon name="check" /> Publicados</span
+              ><strong>{{ canViewMetrics() ? published() : '—' }}</strong
+              ><small>Visibles para los clientes</small>
+            </article>
+            <article class="panel">
+              <span><gg-icon name="clock" /> Reciben reservas</span
+              ><strong>{{ canViewMetrics() ? enabled() : '—' }}</strong
+              ><small>Agenda habilitada y configurada</small>
+            </article>
+          </div>
+          @if (overview()?.limitReached) {
+            <p class="notice">
+              El total de negocios abarca toda la plataforma. Los demás indicadores corresponden a
+              los primeros 100 negocios cargados.
+            </p>
+          }
+          @if (updatedAt() && !error()) {
+            <p class="platform-sync" role="status">
+              Datos consultados: {{ dateLabel(updatedAt()) }} · {{ suspended() }} suspendido(s).
+            </p>
+          }
+          @if (directMode() && !error()) {
+            <section class="panel platform-operations" aria-label="Operación de hoy">
+              <div class="block-heading">
+                <div>
+                  <h2>La operación de hoy</h2>
+                  <p>
+                    Reservas y comprobantes de hoy, con horario de Lima. Los partidos terminan una
+                    hora después de empezar.
+                  </p>
+                </div>
+              </div>
+              @if (operationsError()) {
+                <p class="notice notice-error" role="alert">
+                  No pudimos consultar la operación. Pulsa Actualizar datos para reintentar.
+                </p>
+              } @else if (operationsLoading()) {
+                <p role="status">Consultando las canchas…</p>
+              } @else {
+                <div class="platform-metrics platform-operation-metrics">
+                  <article class="panel">
+                    <span>Reservas confirmadas hoy</span><strong>{{ confirmedToday() }}</strong>
+                  </article>
+                  <article class="panel">
+                    <span>Comprobantes por revisar hoy</span
+                    ><strong>{{ pendingProofsToday() }}</strong>
+                  </article>
+                  <article class="panel">
+                    <span>Partidos en curso</span><strong>{{ gamesRunning() }}</strong>
+                  </article>
+                </div>
+                @for (row of operations(); track row.establishmentId) {
+                  <div class="platform-operation-row">
+                    <strong>{{ row.name }}</strong>
+                    <p>
+                      {{ row.confirmed }} confirmada(s) · {{ row.pendingProofs }} por revisar ·
+                      {{ row.running }} en curso
+                    </p>
+                    <button class="button button-outline" (click)="showVenue(row.establishmentId)">
+                      Ver negocio
+                    </button>
+                    @if (row.partial) {
+                      <small>Indicadores de las primeras 20 canchas activas.</small>
+                    }
+                  </div>
+                } @empty {
+                  <p>La operación aparecerá cuando haya negocios con canchas.</p>
+                }
+              }
+            </section>
+          }
+          <div class="platform-columns">
+            <section class="panel">
+              <div class="block-heading">
+                <h2>Negocios de tu comunidad</h2>
+                <a routerLink="/superadmin/negocios">Ver todos <gg-icon name="arrow" /></a>
+              </div>
+              @if (loading()) {
+                <p role="status">Consultando negocios…</p>
+              } @else if (error()) {
+                <p>Actualiza para consultar los negocios.</p>
+              } @else {
+                @for (venue of venues().slice(0, 4); track venue.id) {
+                  <div class="venue-preview">
+                    <span class="venue-initial">{{ venue.name.slice(0, 1) }}</span>
+                    <div>
+                      <strong>{{ venue.name }}</strong
+                      ><small>{{ venue.location }}</small>
+                    </div>
+                    <span
+                      class="platform-status"
+                      [attr.data-status]="isPublished(venue) ? 'published' : venue.status"
+                      >{{ isPublished(venue) ? 'Publicado' : statusLabel(venue.status) }}</span
+                    >
+                    <button
+                      class="button button-outline"
+                      (click)="showVenue(venue.id)"
+                      [attr.aria-label]="'Ver ficha de ' + venue.name"
+                    >
+                      Ver ficha
+                    </button>
+                  </div>
+                } @empty {
+                  <p>Tu primer negocio aparecerá aquí.</p>
+                }
+              }
+            </section>
+            <section class="panel onboarding">
+              <span class="quick-icon"><gg-icon name="spark" /></span>
+              <h2>Necesitan atención</h2>
+              @if (loading()) {
+                <p>Consultando preparación de los negocios…</p>
+              } @else if (error()) {
+                <p>Actualiza los datos para revisar los pendientes.</p>
+              } @else {
+                @for (venue of attention().slice(0, 4); track venue.id) {
+                  <div class="platform-attention-item">
+                    <strong>{{ venue.name }}</strong>
+                    <p>
+                      {{
+                        (venue.missing || []).length
+                          ? venue.missing.join(' · ')
+                          : 'La recepción de reservas está deshabilitada.'
+                      }}
+                    </p>
+                    <button class="button button-outline" (click)="showVenue(venue.id)">
+                      Revisar negocio <gg-icon name="arrow" />
+                    </button>
+                  </div>
+                } @empty {
+                  <p>
+                    {{
+                      venues().length
+                        ? 'Los negocios activos tienen su agenda habilitada.'
+                        : 'Los pendientes aparecerán cuando se registren negocios.'
+                    }}
+                  </p>
+                }
+              }
+            </section>
+          </div>
+        }
+        @case ('negocios') {
+          <section class="panel business-list">
+            <div class="block-heading">
+              <div>
+                <h2>Directorio de negocios</h2>
+                <p>Busca por nombre o ubicación y revisa cada establecimiento.</p>
+              </div>
+              <button class="text-button" (click)="refresh()" [disabled]="loading() || busy()">
+                Actualizar
+              </button>
+            </div>
+            <div class="business-filters">
+              <label class="business-search"
+                ><gg-icon name="search" /><input
+                  aria-label="Buscar negocio"
+                  placeholder="Buscar negocio o ubicación…"
+                  [ngModel]="query()"
+                  (ngModelChange)="query.set($event)" /></label
+              ><label class="business-status-filter"
+                >Estado<select [ngModel]="filter()" (ngModelChange)="filter.set($event)">
+                  <option value="all">Todos los estados</option>
+                  <option value="draft">Borrador</option>
+                  <option value="pending">Por revisar</option>
+                  <option value="approved">Aprobado</option>
+                  <option value="published">Publicado</option>
+                  <option value="suspended">Suspendido</option>
+                </select></label
+              >
+            </div>
+            @if (loading()) {
+              <div class="platform-empty" role="status">Consultando negocios…</div>
+            } @else if (!error()) {
+              <div class="business-table-wrap">
+                <table>
+                  <caption class="visually-hidden">
+                    Negocios registrados en GrassGo
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th>Negocio</th>
+                      <th>Ubicación</th>
+                      <th>Estado</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (venue of filtered(); track venue.id) {
+                      <tr>
+                        <td>
+                          <strong>{{ venue.name }}</strong>
+                        </td>
+                        <td>{{ venue.location }}</td>
+                        <td>
+                          <span
+                            class="platform-status"
+                            [attr.data-status]="isPublished(venue) ? 'published' : venue.status"
+                            >{{
+                              isPublished(venue) ? 'Publicado' : statusLabel(venue.status)
+                            }}</span
+                          >
+                          <small class="platform-booking-state">{{
+                            venue.bookingEnabled ? 'Recibe reservas' : 'Reservas deshabilitadas'
+                          }}</small>
+                        </td>
+                        <td>
+                          <button
+                            class="button button-outline"
+                            (click)="selectVenue(venue.id)"
+                            [attr.aria-label]="'Ver ficha de ' + venue.name"
+                          >
+                            Ver ficha <gg-icon name="chevron" />
+                          </button>
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="4">
+                          <div class="platform-empty">
+                            <gg-icon name="building" />
+                            <h3>
+                              {{
+                                venues().length
+                                  ? 'No encontramos coincidencias'
+                                  : 'Aún no hay negocios'
+                              }}
+                            </h3>
+                            <p>
+                              {{
+                                venues().length
+                                  ? 'Prueba otro nombre, ubicación o estado.'
+                                  : 'Registra tu primer establecimiento para empezar.'
+                              }}
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              <p class="list-count">
+                {{ filtered().length }} de {{ venues().length }} negocios cargados · Se consultan
+                hasta 100 por carga.
+              </p>
+            }
+          </section>
+          @if (selectedVenue(); as venue) {
+            <section class="panel venue-detail" aria-label="Ficha del negocio">
+              <div class="block-heading">
+                <div>
+                  <span class="eyebrow">FICHA DEL NEGOCIO</span>
+                  <h2>{{ venue.name }}</h2>
+                </div>
+                <button class="text-button" (click)="closeDetail()">Cerrar ficha</button>
+              </div>
+              <p><gg-icon name="pin" /> {{ venue.location }}</p>
+              <p>{{ venue.description || 'Sin descripción adicional.' }}</p>
+              <span class="platform-status" [attr.data-status]="venue.status">{{
+                statusLabel(venue.status)
+              }}</span>
+              @if (directMode()) {
+                <div class="platform-readiness" aria-label="Estado de preparación del negocio">
+                  <p>
+                    <strong>En el catálogo:</strong>
+                    {{ isPublished(venue) ? 'Visible para los clientes' : 'No está visible' }}
+                  </p>
+                  <p>
+                    <strong>Reservas:</strong>
+                    {{ venue.bookingEnabled ? 'Habilitadas' : 'Deshabilitadas' }}
+                  </p>
+                  <ul class="platform-checklist">
+                    <li>
+                      <gg-icon [name]="venue.ownerAssigned ? 'check' : 'clock'" /> Dueño asignado:
+                      {{ venue.ownerAssigned ? 'Sí' : 'Pendiente' }}
+                    </li>
+                    <li>
+                      <gg-icon [name]="venue.scheduleConfigured ? 'check' : 'clock'" /> Horarios:
+                      {{ venue.scheduleConfigured ? 'Configurados' : 'Pendientes' }}
+                    </li>
+                    <li>
+                      <gg-icon [name]="venue.paymentConfigured ? 'check' : 'clock'" /> Datos de pago
+                      y QR: {{ venue.paymentConfigured ? 'Configurados' : 'Pendientes' }}
+                    </li>
+                    <li>
+                      <gg-icon [name]="venue.courtCount ? 'check' : 'clock'" /> Canchas registradas:
+                      {{ venue.courtCount }}
+                    </li>
+                  </ul>
+                  @if (venue.missing.length) {
+                    <div class="notice">
+                      <strong>Para preparar su agenda falta:</strong>
+                      <ul>
+                        @for (item of venue.missing; track item) {
+                          <li>{{ item }}</li>
+                        }
+                      </ul>
+                    </div>
+                  } @else if (!venue.bookingEnabled) {
+                    <p class="notice">
+                      La configuración está completa. La recepción de reservas todavía requiere
+                      habilitación.
+                    </p>
+                  }
+                  @for (court of venue.courts; track court.id) {
+                    <p class="platform-court-summary">
+                      <strong>{{ court.name }}</strong>
+                      @if (court.sport) {
+                        · {{ court.sport }}
+                      }
+                      · Día:
+                      {{ court.dayPriceCents === null ? 'Pendiente' : money(court.dayPriceCents) }}
+                      · Noche:
+                      {{
+                        court.nightPriceCents === null ? 'Pendiente' : money(court.nightPriceCents)
+                      }}
+                    </p>
+                  }
+                  @if (venue.courtLimitReached) {
+                    <p>Se muestran hasta 20 canchas. El contador incluye todas las registradas.</p>
+                  }
+                </div>
+              }
+              <div class="detail-actions">
+                @if (directMode()) {
+                  <button
+                    class="button button-primary"
+                    [disabled]="busy()"
+                    (click)="editPrices(venue.id)"
+                  >
+                    Editar precios por cancha
+                  </button>
+                  <button
+                    class="button button-outline"
+                    [disabled]="busy() || venue.courtCount >= 20"
+                    (click)="addCourt(venue.id)"
+                  >
+                    + Añadir cancha
+                  </button>
+                  <button
+                    class="button button-primary"
+                    [disabled]="busy()"
+                    (click)="openBusinessTool('kiosko')"
+                  >
+                    Kiosko: productos y ventas
+                  </button>
+                  <button
+                    class="button button-outline"
+                    [disabled]="busy()"
+                    (click)="openBusinessTool('ingresos')"
+                  >
+                    Ingresos de canchas y productos
+                  </button>
+                }
+                @if (isPublished(venue)) {
+                  <a class="button button-primary" [routerLink]="['/sedes', venue.id, 'canchas']"
+                    >Ver como cliente <gg-icon name="arrow"
+                  /></a>
+                }
+                @if (
+                  ownedLocalIds().includes(venue.id) &&
+                  ['approved', 'published'].includes(venue.status)
+                ) {
+                  <a class="button button-outline" routerLink="/admin/inicio"
+                    >Administrar mi local <gg-icon name="building"
+                  /></a>
+                }
+                @if (!directMode()) {
+                  <a
+                    class="button button-outline"
+                    [routerLink]="['/superadmin/negocios', venue.id, 'configurar']"
+                    >Configurar negocio</a
+                  >
+                }
+                @if (directMode() && !venue.bookingEnabled) {
+                  <button
+                    class="button button-primary"
+                    [disabled]="
+                      busy() ||
+                      !venue.ready ||
+                      pricing()?.hasUnsavedChanges() ||
+                      pricing()?.isSaving() ||
+                      kiosk()?.hasUnsavedChanges() ||
+                      kiosk()?.isSaving() ||
+                      income()?.hasUnsavedChanges() ||
+                      income()?.isSaving()
+                    "
+                    (click)="pendingPublish.set(venue)"
+                  >
+                    Publicar y habilitar reservas
+                  </button>
+                }
+                @if (['draft', 'pending', 'suspended'].includes(venue.status)) {
+                  <button
+                    class="button button-primary"
+                    [disabled]="busy()"
+                    (click)="pendingStatus.set({ venue, status: 'approved' })"
+                  >
+                    Aprobar negocio
+                  </button>
+                }
+                @if (venue.status !== 'suspended') {
+                  <button
+                    class="button button-outline"
+                    [disabled]="busy()"
+                    (click)="pendingStatus.set({ venue, status: 'suspended' })"
+                  >
+                    Suspender acceso
+                  </button>
+                }
+              </div>
+              @if (directMode() && priceEditor() === venue.id) {
+                <gg-admin-local-pricing
+                  [establishmentId]="venue.id"
+                  context="platform"
+                  (saved)="refresh()"
+                />
+              }
+              @if (directMode() && businessTool() === 'kiosko') {
+                <gg-admin-kiosk [establishmentId]="venue.id" context="platform" />
+              }
+              @if (directMode() && businessTool() === 'ingresos') {
+                <gg-admin-income [establishmentId]="venue.id" context="platform" />
+              }
+              @if (directMode() && courtEditor() === venue.id) {
+                <gg-platform-court-editor
+                  [establishmentId]="venue.id"
+                  (saved)="courtAdded()"
+                  (cancel)="courtEditor.set(null)"
+                />
+              }
+            </section>
+          }
+          @if (pendingStatus(); as change) {
+            <section class="panel status-confirm" aria-label="Confirmar cambio de estado">
+              <h2>
+                {{ change.status === 'approved' ? 'Aprobar' : 'Suspender' }}:
+                {{ change.venue.name }}
+              </h2>
+              <p>
+                {{
+                  change.status === 'approved'
+                    ? 'Se aprobará el negocio. Esto no lo publica ni habilita su agenda automáticamente.'
+                    : 'El negocio dejará de aparecer a los clientes, se suspenderá el acceso del dueño y se bloquearán nuevas reservas. Las reservas existentes se conservan. Aprobarlo después no lo volverá a publicar ni habilitará su agenda automáticamente.'
+                }}
+              </p>
+              <div class="detail-actions">
+                <button class="button button-primary" (click)="confirmStatus()" [disabled]="busy()">
+                  {{ busy() ? 'Guardando…' : 'Confirmar cambio' }}</button
+                ><button
+                  class="button button-outline"
+                  (click)="pendingStatus.set(null)"
+                  [disabled]="busy()"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </section>
+          }
+          @if (pendingPublish(); as venue) {
+            <section class="panel status-confirm" aria-label="Confirmar publicación">
+              <h2>Publicar {{ venue.name }}</h2>
+              <p>
+                El negocio aparecerá a los clientes y podrá recibir reservas con los horarios,
+                precios y datos de pago guardados por su dueño. Cada comprobante seguirá necesitando
+                revisión manual.
+              </p>
+              <div class="detail-actions">
+                <button
+                  class="button button-primary"
+                  [disabled]="busy()"
+                  (click)="confirmPublish()"
+                >
+                  {{ busy() ? 'Publicando…' : 'Confirmar publicación y reservas' }}</button
+                ><button
+                  class="button button-outline"
+                  [disabled]="busy()"
+                  (click)="pendingPublish.set(null)"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </section>
+          }
+        }
+        @case ('nuevo') {
+          @if (directMode()) {
+            @if (!configurationTarget) {
+              <gg-platform-onboarding />
+            } @else {
+              <section class="panel settings-card">
+                <h2>Configuración del negocio</h2>
+                <p>
+                  El dueño configura sus horarios, precios y QR desde el panel de su local. Aquí
+                  puedes revisar sus requisitos y publicar el negocio cuando esté listo.
+                </p>
+                <p>
+                  Los dueños de los negocios existentes ya pueden actualizar sus horarios, precios y
+                  datos de pago desde su panel del local.
+                </p>
+                <a
+                  class="button button-primary"
+                  routerLink="/superadmin/negocios"
+                  [queryParams]="{ ficha: configurationTarget }"
+                  >Ver ficha y preparación</a
+                >
+              </section>
+            }
+          } @else {
+            <gg-business-editor />
+          }
+        }
+        @case ('actividad') {
+          <section class="panel">
+            <div class="block-heading">
+              <div>
+                <h2>Registro de acciones</h2>
+                <p>Últimas 30 acciones registradas. Horario de Lima.</p>
+              </div>
+              <button class="text-button" (click)="refresh()" [disabled]="loading()">
+                Actualizar
+              </button>
+            </div>
+            @if (auditError()) {
+              <div class="notice notice-error" role="alert">{{ auditError() }}</div>
+            } @else if (loading()) {
+              <p role="status">Consultando actividad…</p>
+            } @else {
+              <div class="audit-list">
+                @for (event of events(); track event.id) {
+                  <article>
+                    <span class="audit-dot"><gg-icon name="activity" /></span>
+                    <div>
+                      <strong>{{
+                        event.action === 'business_setting_changed'
+                          ? settingLabel(event.kind)
+                          : eventLabel(event.action)
+                      }}</strong>
+                      <p>
+                        {{ venueName(event.establishmentId) }}
+                        @if (event.status) {
+                          · {{ statusLabel(event.status) }}
+                        }
+                      </p>
+                      <small
+                        >{{
+                          event.actorUid === auth.user()?.uid
+                            ? 'Tu cuenta'
+                            : 'Otro operador autorizado'
+                        }}
+                        · {{ dateLabel(event.at) }}</small
+                      >
+                    </div>
+                  </article>
+                } @empty {
+                  <div class="platform-empty">
+                    <gg-icon name="activity" />
+                    <h3>Aún no hay acciones registradas</h3>
+                    <p>Las altas de negocios y cambios de estado aparecerán aquí.</p>
+                  </div>
+                }
+              </div>
+            }
+          </section>
+        }
+        @case ('configuracion') {
+          <div class="platform-columns">
+            <section class="panel settings-card">
+              <span class="quick-icon"><gg-icon name="shield" /></span>
+              <h2>Tu acceso a la plataforma</h2>
+              <dl>
+                <dt>Cuenta</dt>
+                <dd>{{ auth.user()?.email }}</dd>
+                <dt>Rol</dt>
+                <dd>Superadministrador</dd>
+                <dt>Entorno</dt>
+                <dd>{{ demo ? 'Demostración local' : 'Firebase configurado' }}</dd>
+                <dt>Horario de presentación</dt>
+                <dd>Lima, Perú</dd>
+              </dl>
+              <p>
+                La sesión es compartida entre las pestañas del mismo sitio. Cerrar sesión también
+                cierra el acceso en esas pestañas.
+              </p>
+              <button class="button button-outline" (click)="logout()" [disabled]="busy()">
+                <gg-icon name="logout" /> Cerrar sesión
+              </button>
+            </section>
+            <section class="panel settings-card">
+              <span class="quick-icon"><gg-icon name="settings" /></span>
+              <h2>Próximas etapas</h2>
+              <p>
+                El alta, las invitaciones, la publicación y el resumen usan los mismos negocios que
+                el cliente y el dueño. Desde la campana puedes activar o silenciar los avisos.
+              </p>
+              <ul>
+                <li>El dueño acepta su invitación desde su propia cuenta verificada.</li>
+                <li>Publicar requiere horarios, precios y datos de pago reales.</li>
+                <li>Los comprobantes se revisan manualmente desde el local.</li>
+                <li>
+                  Los avisos con sonido funcionan con GrassGo abierto y después de activar el audio.
+                </li>
+              </ul>
+              @if (demo) {
+                <div class="notice">
+                  Estás usando datos locales de prueba. Los cambios no se publican en el Firebase
+                  real.
+                </div>
+              }
+            </section>
+          </div>
+        }
+      }
+      <footer class="platform-footer">
+        <span>GrassGo · Centro de control</span><span>Acceso exclusivo de superadministración</span>
+      </footer>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,12 @@
+{
+  "score": 4,
+  "summary": "Revisión local de reglas Firestore/Storage y callables de configuración. Los escenarios de permisos, inmutabilidad, límites por archivo, privacidad de borradores y aislamiento de comprobantes pasaron en emuladores. La calificación no certifica el Firebase remoto, que no se ha desplegado ni auditado en esta entrega.",
+  "findings": [
+    {
+      "check": "Storage Abuse / ciclo de vida",
+      "severity": "minor",
+      "issue": "Se limita cada imagen a 5 MB y cada configuración a 20 canchas con 3 fotos por cancha, pero un superadmin autorizado puede subir archivos que después no referencie. No hay limpieza ni cuota acumulada por negocio.",
+      "recommendation": "Definir retención, añadir limpieza de archivos huérfanos y cuotas/monitoreo antes de producción. No conceder escrituras de medios a clientes o administradores locales sin extender la validación y sus pruebas."
+    }
+  ]
+}

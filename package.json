@@ -1,0 +1,61 @@
+{
+  "name": "grassgo",
+  "version": "0.0.0",
+  "scripts": {
+    "test:kiosk-photos": "npm test -- --watch=false --include=src/app/core/services/kiosk.service.spec.ts --include=src/app/core/services/kiosk-photo.service.spec.ts --include=src/app/core/services/product-photo.spec.ts --include=src/app/features/staff/admin-kiosk.spec.ts --include=src/app/features/staff/admin-kiosk-photo.spec.ts && node scripts/firebase-local.mjs emulators:exec --config firebase.test.json --project demo-grassgo-kiosk-photo-tests --only firestore \"node --test --test-concurrency=1 tests/kiosk-photo.rules.test.mjs\"",
+    "test:kiosk": "npm test -- --watch=false --include=src/app/core/services/kiosk.service.spec.ts --include=src/app/features/staff/admin-kiosk.spec.ts --include=src/app/core/services/business-income.service.spec.ts && node scripts/firebase-local.mjs emulators:exec --config firebase.test.json --project demo-grassgo-kiosk-tests --only firestore \"node --test --test-concurrency=1 tests/kiosk-income.rules.test.mjs\"",
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "test:rules": "node scripts/firebase-local.mjs emulators:exec --project demo-grassgo --only firestore,storage \"node --test --test-concurrency=1 tests/firestore.rules.test.mjs tests/storage.rules.test.mjs\"",
+    "emulators": "node scripts/firebase-local.mjs emulators:start --project demo-grassgo --only auth,firestore,functions,storage",
+    "start:emulators": "ng serve --configuration emulators",
+    "start:direct-emulators": "ng serve --configuration direct-emulators",
+    "seed:direct-emulators": "node scripts/seed-direct-emulators.mjs --seed-demo",
+    "test:direct": "node scripts/firebase-local.mjs emulators:exec --config firebase.test.json --project demo-grassgo-direct-tests --only firestore \"node --test --test-concurrency=1 tests/direct-reservations.rules.test.mjs\"",
+    "seed:emulators": "node scripts/seed-emulators.mjs",
+    "test:backend": "node scripts/firebase-local.mjs emulators:exec --project demo-grassgo --only firestore \"node --test --test-concurrency=1 functions/tests/booking-api.test.mjs\"",
+    "test:platform": "node scripts/firebase-local.mjs emulators:exec --project demo-grassgo-platform-tests --only firestore \"node --test functions/tests/platform-api.test.mjs\"",
+    "test:integration": "node scripts/firebase-local.mjs emulators:exec --config firebase.test.json --project demo-grassgo --only firestore,storage \"node --test --test-concurrency=1 tests/firestore.rules.test.mjs tests/storage.rules.test.mjs tests/business-media.rules.test.mjs tests/direct-reservations.rules.test.mjs tests/direct-schedule.rules.test.mjs tests/direct-business-settings.rules.test.mjs tests/direct-pricing.rules.test.mjs tests/direct-games.rules.test.mjs tests/direct-platform.rules.test.mjs functions/tests/booking-api.test.mjs functions/tests/platform-api.test.mjs functions/tests/business-api.test.mjs functions/tests/operations-api.test.mjs functions/tests/ratings-api.test.mjs functions/tests/private-media.test.mjs functions/tests/http-server.test.mjs\"",
+    "smoke:business": "node scripts/smoke-business.mjs",
+    "test:operations": "node scripts/firebase-local.mjs emulators:exec --config firebase.test.json --project demo-grassgo-operations-tests --only firestore \"node --test functions/tests/operations-api.test.mjs\"",
+    "test:schedule": "node scripts/firebase-local.mjs emulators:exec --config firebase.test.json --project demo-grassgo-schedule-tests --only firestore \"node --test --test-concurrency=1 tests/direct-schedule.rules.test.mjs\"",
+    "test:business-settings": "node scripts/firebase-local.mjs emulators:exec --config firebase.test.json --project demo-grassgo-business-settings-tests --only firestore \"node --test --test-concurrency=1 tests/direct-business-settings.rules.test.mjs\"",
+    "test:direct-operations": "node scripts/firebase-local.mjs emulators:exec --config firebase.test.json --project demo-grassgo-direct-operations-tests --only firestore \"node --test --test-concurrency=1 tests/direct-pricing.rules.test.mjs tests/direct-games.rules.test.mjs\"",
+    "test:direct-platform": "node scripts/firebase-local.mjs emulators:exec --config firebase.test.json --project demo-grassgo-platform-direct-rules-tests --only firestore \"node --test --test-concurrency=1 tests/direct-platform.rules.test.mjs\"",
+    "test:connected": "npm test -- --watch=false --include=src/app/core/services/notification.service.spec.ts --include=src/app/core/services/platform-onboarding.service.spec.ts && node scripts/firebase-local.mjs emulators:exec --config firebase.test.json --project demo-grassgo-connected-flow-tests --only firestore \"node --test --test-concurrency=1 tests/platform-connected-flow.rules.test.mjs\"",
+    "test:multicourt": "npm test -- --watch=false --include=src/app/core/services/multicourt-onboarding.service.spec.ts --include=src/app/core/services/multicourt-pricing.service.spec.ts --include=src/app/features/platform/platform-multicourt.spec.ts && node scripts/firebase-local.mjs emulators:exec --config firebase.test.json --project demo-grassgo-multicourt-tests --only firestore \"node --test --test-concurrency=1 tests/multicourt-pricing.rules.test.mjs\""
+  },
+  "private": true,
+  "packageManager": "npm@11.19.0",
+  "dependencies": {
+    "@angular/common": "^22.2.0",
+    "@angular/compiler": "^22.2.0",
+    "@angular/core": "^22.2.0",
+    "@angular/forms": "^22.2.0",
+    "@angular/platform-browser": "^22.2.0",
+    "@angular/router": "^22.2.0",
+    "firebase": "^12.19.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.2.1",
+    "@angular/cli": "^22.2.1",
+    "@angular/compiler-cli": "^22.2.0",
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "firebase-tools": "^15.34.1",
+    "jsdom": "^30.1.3",
+    "prettier": "^3.8.1",
+    "qrcode": "^1.5.4",
+    "sass": "^1.105.1",
+    "typescript": "~6.0.2",
+    "vitest": "^4.1.12"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.6",
+    "vite": "^8.3.5"
+  }
+}

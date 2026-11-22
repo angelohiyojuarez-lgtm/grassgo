@@ -1,0 +1,166 @@
+:host {
+  display: block;
+}
+.local-pricing {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+.pricing-heading {
+  margin: 28px 0 24px;
+}
+h2 {
+  font-size: clamp(27px, 3vw, 34px);
+  line-height: 1.3;
+  margin: 8px 0;
+}
+h3 {
+  font-size: 25px;
+  line-height: 1.35;
+  margin: 0 0 12px;
+}
+p {
+  margin: 0 0 16px;
+}
+.eyebrow,
+.help {
+  color: var(--muted);
+  font-size: 16px;
+}
+.pricing-section,
+.pricing-empty {
+  padding: 28px;
+  margin: 24px 0;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.pricing-policy {
+  display: flex;
+  gap: 14px;
+  align-items: start;
+}
+.pricing-policy p {
+  margin: 0;
+}
+.notice {
+  font-size: 17px;
+  padding: 20px;
+  margin: 20px 0;
+  overflow-wrap: anywhere;
+}
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+label {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 20px 0;
+}
+input,
+select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 58px;
+  margin-top: 8px;
+  padding: 13px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 18px;
+}
+.price-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.local-pricing .button {
+  min-height: 56px;
+  padding: 14px 20px;
+  border-radius: 15px;
+  font-size: 17px;
+  line-height: 1.4;
+  white-space: normal;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.button-primary {
+  min-height: 62px;
+  font-size: 18px;
+}
+.button-outline {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.save-button {
+  margin-top: 10px;
+}
+.reload-button {
+  margin-top: 22px;
+}
+.pricing-summary {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+  padding: 20px 0;
+  margin: 22px 0;
+  border-block: 1px solid var(--line);
+  font-size: 18px;
+}
+.advance-info {
+  font-size: 18px;
+}
+.pricing-empty {
+  text-align: center;
+}
+.pricing-empty gg-icon {
+  font-size: 32px;
+}
+.pricing-loading {
+  padding: 28px;
+  font-size: 18px;
+}
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.button-row .button {
+  flex: 1 1 220px;
+}
+button:disabled {
+  opacity: 0.65;
+}
+:is(button, input, select):focus-visible {
+  outline: 3px solid var(--green);
+  outline-offset: 4px;
+}
+@media (max-width: 650px) {
+  .pricing-section,
+  .pricing-empty {
+    padding: 22px 18px;
+  }
+  .price-fields {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .button {
+    width: 100%;
+  }
+  h3 {
+    font-size: 23px;
+  }
+  .pricing-summary {
+    font-size: 17px;
+  }
+}

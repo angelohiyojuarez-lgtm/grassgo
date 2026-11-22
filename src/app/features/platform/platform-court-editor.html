@@ -1,0 +1,33 @@
+<section class="court-editor panel" aria-label="Añadir una cancha al negocio">
+  <h2>Añadir una cancha</h2>
+  <p>
+    Elige su deporte y precios. Compartirá los horarios del establecimiento y tendrá su propia
+    disponibilidad.
+  </p>
+  @if (error()) {
+    <p class="notice notice-error" role="alert">{{ error() }}</p>
+  }
+  @if (message()) {
+    <p class="notice notice-success" role="status">{{ message() }}</p>
+  }
+  <form (ngSubmit)="save()">
+    <gg-platform-court-fields [draft]="draft()" [disabled]="busy()" />
+    <p class="court-note">
+      El dueño también podrá cambiar los precios desde Mi local. Guardarla conserva las reservas y
+      los datos de pago existentes.
+    </p>
+    <div class="court-actions">
+      <button
+        type="button"
+        class="button button-outline"
+        (click)="cancel.emit()"
+        [disabled]="busy()"
+      >
+        Volver a las canchas
+      </button>
+      <button type="submit" class="button button-primary" [disabled]="busy()">
+        {{ busy() ? 'Guardando cancha…' : 'Guardar cancha' }}
+      </button>
+    </div>
+  </form>
+</section>

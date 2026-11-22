@@ -1,0 +1,161 @@
+<div class="page discovery-page">
+  @if (!isCatalog) {
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <span class="eyebrow"><span class="status-dot"></span> EL FÚTBOL NOS ENCUENTRA</span>
+        <h1 id="hero-title">Menos vueltas.<br />Más <span>pichanga.</span></h1>
+        <p>Junta a tu equipo. Encuentra tu cancha.<br />Haz espacio para lo que más te gusta.</p>
+        <a class="button button-lime" routerLink="/sedes"
+          >Explorar canchas <gg-icon name="arrow"
+        /></a>
+        <div class="hero-location"><gg-icon name="pin" /> Comenzamos en Andahuaylas, Apurímac</div>
+      </div>
+      <div
+        class="hero-photo"
+        role="img"
+        aria-label="Imagen de referencia de un estadio de fútbol iluminado"
+      >
+        <span class="photo-label">TU EQUIPO. TU CANCHA. TU MOMENTO.</span>
+        <div class="hero-note">
+          <span class="note-icon"><gg-icon name="field" /></span>
+          <div>
+            <strong>El próximo partido empieza aquí</strong
+            ><span>Un lugar para encontrarnos y jugar.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="value-strip" aria-label="Nuestra propuesta">
+      <span><gg-icon name="search" /> Encuentra tu cancha</span
+      ><span><gg-icon name="user" /> Una cuenta para tu equipo</span
+      ><span><gg-icon name="shield" /> Información clara, siempre</span>
+    </section>
+  } @else {
+    <section class="page-heading">
+      <span class="eyebrow">ENCUENTRA TU PRÓXIMO PARTIDO</span>
+      <h1>Tu cancha te espera<span class="green-text">.</span></h1>
+      <p>Explora los establecimientos que se suman a GrassGo.</p>
+    </section>
+    @if (auth.user()) {
+      <label class="search-box"
+        ><gg-icon name="search" /><input
+          type="search"
+          aria-label="Buscar establecimiento o ubicación"
+          placeholder="Busca por nombre o ubicación"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+      /></label>
+      @if (loading()) {
+        <p class="notice" role="status">Buscando establecimientos…</p>
+      } @else if (error()) {
+        <div class="notice notice-error" role="alert">
+          {{ error() }} <button class="text-button" (click)="load()">Reintentar</button>
+        </div>
+      } @else {
+        <div class="catalog-grid">
+          @for (venue of filtered(); track venue.id) {
+            <article class="panel live-venue">
+              <span class="pill">Establecimiento publicado</span>
+              <h2>{{ venue.name }}</h2>
+              <p><gg-icon name="pin" /> {{ venue.location }}</p>
+              <p>{{ venue.description }}</p>
+              <span class="muted">La reserva online se habilitará en una próxima etapa.</span>
+            </article>
+          }
+        </div>
+        @if (!filtered().length) {
+          <div class="notice">
+            {{
+              search()
+                ? 'No encontramos coincidencias. Prueba con otra búsqueda.'
+                : 'Todavía no hay establecimientos publicados. Mientras tanto, conoce la presentación del piloto.'
+            }}
+          </div>
+        }
+      }
+    } @else {
+      <div class="catalog-invite">
+        <div>
+          <strong>Tu próximo equipo empieza con una cuenta.</strong>
+          <p>Ingresa para consultar el catálogo de esta primera versión.</p>
+        </div>
+        <a class="button button-primary" routerLink="/ingresar" [queryParams]="{ next: '/sedes' }"
+          >Ingresar <gg-icon name="arrow"
+        /></a>
+      </div>
+    }
+  }
+
+  <section class="featured-section" aria-labelledby="featured-title">
+    <div class="section-heading">
+      <div>
+        <span class="eyebrow">EL COMIENZO DE GRASSGO</span>
+        <h2 id="featured-title">Una cancha. Muchas historias.</h2>
+      </div>
+      <span class="subtle-label">CONOCE EL PILOTO</span>
+    </div>
+    <article class="venue-card">
+      <a class="venue-image" routerLink="/sedes/piloto" aria-label="Conocer el piloto Grass El Puma"
+        ><img
+          src="/assets/cancha-futbol.avif"
+          alt="Imagen de referencia de una cancha de fútbol"
+          loading="lazy"
+        /><span class="pill pill-light">Presentación del piloto</span></a
+      >
+      <div class="venue-copy">
+        <div class="venue-topline">
+          <span class="eyebrow">GRASS SINTÉTICO</span><span class="tiny-tag">ANDAHUAYLAS</span>
+        </div>
+        <h3>Grass El Puma</h3>
+        <p class="venue-location"><gg-icon name="pin" /> Salinas, Andahuaylas · Apurímac</p>
+        <p>El punto de partida de GrassGo. Una cancha y todas las ganas de volver a jugar.</p>
+        <div class="venue-bottom">
+          <span>Imagen referencial · Sin reservas online aún</span
+          ><a
+            class="round-link"
+            routerLink="/sedes/piloto"
+            aria-label="Ver presentación de Grass El Puma"
+            ><gg-icon name="arrow"
+          /></a>
+        </div>
+      </div>
+    </article>
+  </section>
+  @if (!isCatalog) {
+    <section class="how-section" aria-labelledby="how-title">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">ASÍ DEBERÍA SER DE FÁCIL</span>
+          <h2 id="how-title">Del chat del equipo a la cancha.</h2>
+        </div>
+      </div>
+      <div class="steps-grid">
+        <article>
+          <span class="step-number">01</span>
+          <h3>Encuentra tu lugar</h3>
+          <p>Explora establecimientos y conoce sus canchas.</p>
+        </article>
+        <article>
+          <span class="step-number">02</span>
+          <h3>Prepara tu cuenta</h3>
+          <p>Crea tu perfil y ten todo listo para tus próximos partidos.</p>
+        </article>
+        <article>
+          <span class="step-number">03</span>
+          <h3>Lo siguiente: reservar</h3>
+          <p>Estamos preparando los horarios y las solicitudes de reserva.</p>
+        </article>
+      </div>
+    </section>
+    <section class="join-banner">
+      <span class="join-symbol"><gg-icon name="spark" /></span>
+      <div>
+        <h2>Tu próxima pichanga, más cerca.</h2>
+        <p>Empieza con tu cuenta. Nosotros seguimos preparando la cancha.</p>
+      </div>
+      <a class="button button-primary" [routerLink]="auth.user() ? '/perfil' : '/registro'"
+        >{{ auth.user() ? 'Ver mi cuenta' : 'Crear mi cuenta' }} <gg-icon name="arrow"
+      /></a>
+    </section>
+  }
+</div>

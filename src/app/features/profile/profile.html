@@ -1,0 +1,175 @@
+<div class="page profile-page">
+  <section class="page-heading">
+    <span class="eyebrow">DENTRO DEL EQUIPO</span>
+    <h1>Mi cuenta<span class="green-text">.</span></h1>
+    <p>Tu identidad dentro y fuera de la cancha.</p>
+  </section>
+  @if (accessNotice) {
+    <div class="notice" role="status">
+      {{
+        accessNotice === 'denied'
+          ? 'Tu cuenta no tiene acceso a esa sección de administración.'
+          : 'No pudimos verificar los permisos de esa sección. Inténtalo nuevamente.'
+      }}
+    </div>
+  }
+  <div class="profile-layout">
+    <aside class="profile-sidebar panel">
+      <div class="profile-identity">
+        <span class="avatar">{{ initial() }}</span>
+        <h2>{{ name || 'Tu perfil' }}</h2>
+        <p class="email-text">{{ auth.user()?.email }}</p>
+        <span class="pill">Cuenta de cliente</span>
+      </div>
+      <div class="sidebar-divider"></div>
+      @if (error()) {
+        <div class="notice notice-error" role="alert">{{ error() }}</div>
+      }
+      @if (message()) {
+        <div class="notice notice-success" role="status">{{ message() }}</div>
+      }
+      <details class="profile-option" (toggle)="onInformationToggle($event)">
+        <summary class="sidebar-link">
+          <gg-icon name="user" /> Tu información <gg-icon name="chevron" />
+        </summary>
+        <section class="profile-form profile-option-content">
+          <div class="section-heading">
+            <div>
+              <h2>Tu información</h2>
+              <p class="muted">Solo tú puedes consultar y editar estos datos.</p>
+            </div>
+            <span class="soft-icon"><gg-icon name="user" /></span>
+          </div>
+          @if (loading()) {
+            <p role="status">Cargando tu perfil…</p>
+          }
+          <form
+            #profileForm="ngForm"
+            (ngSubmit)="save(profileForm)"
+            novalidate
+            [attr.aria-busy]="busy() || loading()"
+          >
+            <fieldset [disabled]="busy() || loading()">
+              <label for="profile-name">Nombre</label
+              ><input
+                id="profile-name"
+                name="name"
+                [(ngModel)]="name"
+                required
+                minlength="2"
+                maxlength="80"
+                autocomplete="name"
+                placeholder="Tu nombre"
+              /><label for="profile-phone">Teléfono <span class="optional">(opcional)</span></label
+              ><input
+                id="profile-phone"
+                name="phone"
+                [(ngModel)]="phone"
+                type="tel"
+                inputmode="tel"
+                maxlength="20"
+                pattern="[+0-9 ()-]{0,20}"
+                autocomplete="tel"
+                placeholder="Ej. +51 987 654 321"
+              /><label for="profile-email">Correo de tu cuenta</label
+              ><input
+                id="profile-email"
+                [value]="auth.user()?.email || ''"
+                type="email"
+                disabled
+              /><small>El correo se gestiona desde tu identidad de acceso.</small>
+              <div class="form-actions">
+                <button
+                  class="button button-primary"
+                  type="submit"
+                  [disabled]="busy() || loading()"
+                >
+                  {{ busy() ? 'Guardando…' : 'Guardar cambios' }}<gg-icon name="check" />
+                </button>
+              </div>
+            </fieldset>
+          </form>
+          @if (error()) {
+            <button
+              class="text-button"
+              type="button"
+              [disabled]="loading()"
+              (click)="loadProfile()"
+            >
+              Volver a cargar perfil
+            </button>
+          }
+        </section>
+      </details>
+      <details class="profile-option">
+        <summary class="sidebar-link">
+          <gg-icon name="shield" /> Acceso y seguridad <gg-icon name="chevron" />
+        </summary>
+        <section class="security-panel profile-option-content">
+          <span class="soft-icon"><gg-icon name="shield" /></span>
+          <div>
+            <h2>Acceso y seguridad</h2>
+            <p>Recupera tu contraseña con un enlace enviado a tu correo.</p>
+          </div>
+          <a class="text-button" routerLink="/recuperar"
+            >Recuperar contraseña <gg-icon name="arrow"
+          /></a>
+        </section>
+      </details>
+
+      <a class="sidebar-link" routerLink="/reservas"
+        ><gg-icon name="calendar" /> Mis reservas <gg-icon name="chevron" /></a
+      ><a class="sidebar-link" routerLink="/sedes"
+        ><gg-icon name="field" /> Explorar canchas <gg-icon name="chevron" /></a
+      ><a class="sidebar-link" routerLink="/invitaciones"
+        ><gg-icon name="mail" /> Invitaciones a negocios <gg-icon name="chevron" /></a
+      ><button
+        class="sidebar-link logout-link"
+        type="button"
+        (click)="logout()"
+        [disabled]="busy()"
+      >
+        <gg-icon name="logout" /> Cerrar sesión
+      </button>
+    </aside>
+    <div class="profile-main">
+      @if (!auth.user()?.emailVerified) {
+        <section class="verification-banner">
+          <gg-icon name="mail" />
+          <div>
+            <strong>Verifica tu correo</strong>
+            <p>Confirma que esta cuenta es tuya.</p>
+          </div>
+          <button
+            type="button"
+            class="text-button"
+            [disabled]="sending()"
+            (click)="sendVerification()"
+          >
+            {{ sending() ? 'Enviando…' : 'Enviar enlace' }}
+          </button>
+        </section>
+      }
+      @if (memberships().length || superadmin()) {
+        <section class="panel">
+          <h2>Administración</h2>
+          @if (memberships().length) {
+            <a class="sidebar-link" routerLink="/gestion"
+              ><gg-icon name="field" /> Mis establecimientos <gg-icon name="chevron"
+            /></a>
+          }
+          @if (superadmin()) {
+            <a class="sidebar-link" routerLink="/plataforma"
+              ><gg-icon name="shield" /> Plataforma GrassGo <gg-icon name="chevron"
+            /></a>
+          }
+        </section>
+      }
+      @if (permissionsError()) {
+        <p class="muted" role="status">
+          No pudimos comprobar tus asignaciones administrativas. El acceso permanece restringido.
+        </p>
+      }
+    </div>
+  </div>
+</div>

@@ -1,0 +1,671 @@
+<div class="page staff-page ops-page">
+  <div class="staff-title">
+    <div>
+      <span class="eyebrow">ADMINISTRACIÓN DE TU ESTABLECIMIENTO</span>
+      <h1>Tu local, a la mano<span class="cyan-text">.</span></h1>
+      <p>Elige lo que necesitas hacer. Te guiamos paso a paso.</p>
+    </div>
+    <button
+      class="button button-outline"
+      [disabled]="busy() || settingsSaving()"
+      (click)="logout()"
+    >
+      Salir <gg-icon name="logout" />
+    </button>
+  </div>
+  @if (error()) {
+    <div class="notice notice-error admin-feedback" role="alert">
+      <p>{{ error() }}</p>
+      <button class="button button-outline" [disabled]="busy()" (click)="initialize()">
+        Volver a intentar <gg-icon name="arrow" />
+      </button>
+    </div>
+  }
+  @if (message()) {
+    <div class="notice notice-success admin-feedback" role="status">
+      <gg-icon name="check" />
+      <p>{{ message() }}</p>
+    </div>
+  }
+  <div class="ops-topbar">
+    @if (memberships().length > 1) {
+      <label
+        >Estás administrando
+        <select
+          [ngModel]="selected()"
+          [disabled]="busy() || settingsSaving()"
+          (change)="selectEstablishment($any($event.target).value, $any($event.target))"
+        >
+          @for (m of memberships(); track m.establishmentId) {
+            <option [value]="m.establishmentId">{{ m.name }}</option>
+          }
+        </select>
+      </label>
+    } @else {
+      <div class="admin-local-name">
+        <span>Tu establecimiento</span>
+        <strong>{{ overview()?.name || memberships()[0]?.name || 'Consultando tu local…' }}</strong>
+      </div>
+    }
+    <div class="ops-sync">
+      <div>
+        <span>{{
+          stale() ? 'Falta actualizar la información' : 'La información se actualiza sola'
+        }}</span>
+        @if (syncedAt()) {
+          <small>Última consulta: {{ clock(syncedAt()) }}</small>
+        }
+      </div>
+      <button
+        class="button button-outline"
+        (click)="refreshCurrent()"
+        [disabled]="busy() || settingsSaving() || !selected()"
+      >
+        Actualizar <gg-icon name="activity" />
+      </button>
+    </div>
+  </div>
+  @if (stale()) {
+    <div class="notice notice-error admin-feedback" role="alert">
+      <p>
+        No pudimos actualizar los datos. Pulsa <strong>Actualizar</strong> antes de confirmar un
+        cambio.
+      </p>
+    </div>
+  }
+  <div class="ops-layout">
+    <nav class="ops-nav" [class.three-tasks]="isDirectLocal()" aria-label="¿Qué quieres hacer?">
+      <button
+        class="admin-task"
+        [class.active]="tab() === 'reservas'"
+        [attr.aria-pressed]="tab() === 'reservas'"
+        aria-controls="admin-task-content"
+        [disabled]="busy() || settingsSaving() || !selected()"
+        (click)="setTab('reservas')"
+      >
+        <span class="admin-task-icon"><gg-icon name="calendar" /></span>
+        <span class="admin-task-copy"
+          ><strong>Ver mi agenda</strong><span>Consulta las reservas de cada día</span></span
+        >
+        <gg-icon class="admin-task-arrow" name="arrow" />
+      </button>
+      <button
+        class="admin-task"
+        [class.active]="tab() === 'pagos'"
+        [attr.aria-pressed]="tab() === 'pagos'"
+        aria-controls="admin-task-content"
+        [disabled]="busy() || settingsSaving() || !selected()"
+        (click)="setTab('pagos')"
+      >
+        <span class="admin-task-icon"><gg-icon name="shield" /></span>
+        <span class="admin-task-copy"
+          ><strong>Revisar comprobantes</strong
+          ><span>Atiende las fotos pendientes de revisión</span></span
+        >
+        <gg-icon class="admin-task-arrow" name="arrow" />
+      </button>
+      @if (isDirectLocal()) {
+        <button
+          class="admin-task"
+          [class.active]="tab() === 'kiosko'"
+          [attr.aria-pressed]="tab() === 'kiosko'"
+          aria-controls="admin-task-content"
+          [disabled]="busy() || settingsSaving() || !selected()"
+          (click)="setTab('kiosko')"
+        >
+          <span class="admin-task-icon"><gg-icon name="building" /></span>
+          <span class="admin-task-copy"
+            ><strong>Mi kiosko</strong><span>Vende productos y repón tu stock</span></span
+          ><gg-icon class="admin-task-arrow" name="arrow" />
+        </button>
+        <button
+          class="admin-task"
+          [class.active]="tab() === 'ingresos'"
+          [attr.aria-pressed]="tab() === 'ingresos'"
+          aria-controls="admin-task-content"
+          [disabled]="busy() || settingsSaving() || !selected()"
+          (click)="setTab('ingresos')"
+        >
+          <span class="admin-task-icon"><gg-icon name="activity" /></span>
+          <span class="admin-task-copy"
+            ><strong>Mis ingresos</strong><span>Canchas, productos y total cobrado</span></span
+          ><gg-icon class="admin-task-arrow" name="arrow" />
+        </button>
+      }
+      @if (overview() && overview()?.engine !== 'direct') {
+        <button
+          class="admin-task"
+          [class.active]="tab() === 'canchas'"
+          [attr.aria-pressed]="tab() === 'canchas'"
+          [disabled]="busy()"
+          (click)="setTab('canchas')"
+        >
+          <span class="admin-task-icon"><gg-icon name="field" /></span>
+          <span class="admin-task-copy"
+            ><strong>Mis canchas</strong><span>Abre o pausa las nuevas reservas</span></span
+          >
+          <gg-icon class="admin-task-arrow" name="arrow" />
+        </button>
+      }
+      <button
+        class="admin-task"
+        [class.active]="tab() === 'configuracion'"
+        [attr.aria-pressed]="tab() === 'configuracion'"
+        aria-controls="admin-task-content"
+        [disabled]="busy() || settingsSaving() || !selected() || loading()"
+        (click)="setTab('configuracion')"
+      >
+        <span class="admin-task-icon"><gg-icon name="settings" /></span>
+        <span class="admin-task-copy"
+          ><strong>Mi local</strong
+          ><span>{{
+            isDirectLocal() ? 'Edita datos, QR y horarios' : 'Revisa los horarios, precios y datos'
+          }}</span></span
+        >
+        <gg-icon class="admin-task-arrow" name="arrow" />
+      </button>
+    </nav>
+    <section
+      class="ops-content"
+      id="admin-task-content"
+      aria-live="polite"
+      [attr.aria-busy]="loading()"
+    >
+      @if (tab() === 'kiosko' && selected() && !loading() && !error()) {
+        <gg-admin-kiosk [establishmentId]="selected()" />
+      } @else if (tab() === 'ingresos' && selected() && !loading() && !error()) {
+        <gg-admin-income [establishmentId]="selected()" />
+      } @else if (tab() === 'configuracion' && selected() && !loading()) {
+        @if (isDirectLocal()) {
+          <nav class="local-sections" aria-label="Configurar mi local">
+            <button
+              class="button"
+              [class.button-primary]="localSection() === 'datos'"
+              [class.button-outline]="localSection() !== 'datos'"
+              [attr.aria-pressed]="localSection() === 'datos'"
+              [disabled]="settingsSaving()"
+              (click)="setLocalSection('datos')"
+            >
+              <gg-icon name="user" /> Datos y QR de pago
+            </button>
+            <button
+              class="button"
+              [class.button-primary]="localSection() === 'horarios'"
+              [class.button-outline]="localSection() !== 'horarios'"
+              [attr.aria-pressed]="localSection() === 'horarios'"
+              [disabled]="settingsSaving()"
+              (click)="setLocalSection('horarios')"
+            >
+              <gg-icon name="clock" /> Horarios y cierres
+            </button>
+            <button
+              class="button"
+              [class.button-primary]="localSection() === 'precios'"
+              [class.button-outline]="localSection() !== 'precios'"
+              [attr.aria-pressed]="localSection() === 'precios'"
+              [disabled]="settingsSaving()"
+              (click)="setLocalSection('precios')"
+            >
+              <gg-icon name="settings" /> Precios por cancha
+            </button>
+          </nav>
+          @if (localSection() === 'datos') {
+            <gg-admin-local-business [establishmentId]="selected()" />
+          } @else if (localSection() === 'horarios') {
+            <gg-admin-local-schedule [establishmentId]="selected()" />
+          } @else {
+            <gg-admin-local-pricing [establishmentId]="selected()" />
+          }
+        } @else {
+          <gg-admin-settings [establishmentId]="selected()" />
+        }
+      } @else if (loading()) {
+        <div class="panel loading-state" role="status">
+          <gg-icon name="clock" /><span>Un momento, estamos consultando tu establecimiento…</span>
+        </div>
+      } @else if (overview(); as local) {
+        @if (tab() === 'canchas') {
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">ESPACIOS DE TU LOCAL</span>
+              <h2>Mis canchas</h2>
+            </div>
+          </div>
+          <div class="notice">
+            Activar el mantenimiento pausa las nuevas solicitudes. Las reservas que ya existen se
+            conservan.
+          </div>
+          <div class="staff-courts">
+            @for (court of local.courts; track court.id) {
+              <article class="panel">
+                <span class="tag">{{
+                  court.status !== 'active'
+                    ? 'Inactiva'
+                    : court.maintenance
+                      ? 'En mantenimiento'
+                      : 'Abierta para reservas'
+                }}</span>
+                <h3>{{ court.name }}</h3>
+                <p>{{ court.sport || 'Deporte sin especificar' }} · {{ court.surface }}</p>
+                <div class="price-strip">
+                  <div>
+                    <span>Día</span><strong>{{ money(court.dayPriceCents) }}</strong>
+                  </div>
+                  <div>
+                    <span>Noche</span><strong>{{ money(court.nightPriceCents) }}</strong>
+                  </div>
+                </div>
+                @if (court.runtime; as game) {
+                  <div class="notice">
+                    En juego desde {{ clock(game.actualStartAt) }} · fin estimado
+                    {{ clock(game.estimatedEndAt) }}. Termina automáticamente al cumplir una hora.
+                  </div>
+                }
+                <button
+                  class="button button-outline"
+                  [disabled]="busy() || court.status !== 'active' || local.engine === 'direct'"
+                  (click)="maintenance(court)"
+                >
+                  {{ court.maintenance ? 'Reabrir para reservas' : 'Activar mantenimiento' }}
+                </button>
+              </article>
+            }
+          </div>
+        } @else {
+          <div class="ops-agenda-heading">
+            <div>
+              <span class="eyebrow">{{ local.name }}</span>
+              <h2>{{ tab() === 'pagos' ? 'Comprobantes por revisar' : 'Agenda de tu local' }}</h2>
+              <p>
+                {{
+                  tab() === 'pagos'
+                    ? local.engine === 'direct'
+                      ? 'Aquí están los comprobantes pendientes, aunque la reserva sea para otro día.'
+                      : 'Elige una fecha para revisar los comprobantes de sus reservas.'
+                    : 'Elige un día para ver sus reservas.'
+                }}
+              </p>
+            </div>
+          </div>
+          @if (tab() !== 'pagos' || local.engine !== 'direct') {
+            <div class="admin-day-controls" role="group" aria-label="Elige el día de la agenda">
+              <button
+                class="button button-outline"
+                [class.selected]="date() === today()"
+                [attr.aria-pressed]="date() === today()"
+                [disabled]="busy()"
+                (click)="selectDate(today())"
+              >
+                Hoy
+              </button>
+              <button
+                class="button button-outline"
+                [class.selected]="date() === tomorrow()"
+                [attr.aria-pressed]="date() === tomorrow()"
+                [disabled]="busy()"
+                (click)="selectDate(tomorrow())"
+              >
+                Mañana
+              </button>
+              <label
+                >Otra fecha<input
+                  type="date"
+                  [ngModel]="date()"
+                  (ngModelChange)="selectDate($event)"
+                  [disabled]="busy()"
+              /></label>
+            </div>
+            <p class="admin-selected-date"><gg-icon name="calendar" />{{ dateLabel(date()) }}</p>
+          }
+          <div class="ops-stats" [class.admin-stats-simple]="local.engine === 'direct'">
+            @if (tab() !== 'pagos') {
+              <div class="panel">
+                <span>{{
+                  local.engine === 'direct' ? 'Reservas confirmadas' : 'Reservas de este día'
+                }}</span>
+                <strong>{{
+                  local.engine === 'direct' ? count('confirmed') : local.reservations.length
+                }}</strong>
+              </div>
+            }
+            <div class="panel">
+              <span>{{ tab() === 'pagos' ? 'Por revisar' : 'Comprobantes de esta fecha' }}</span>
+              <strong>{{
+                tab() === 'pagos' ? local.reservations.length : count('pending_verification')
+              }}</strong>
+            </div>
+            @if (tab() !== 'pagos') {
+              <div class="panel">
+                <span>En juego</span><strong>{{ count('running') }}</strong>
+              </div>
+              <div class="panel">
+                <span>Finalizadas</span><strong>{{ count('completed') }}</strong>
+              </div>
+            }
+          </div>
+          @if (local.pendingLimitReached) {
+            <div class="notice">
+              Se muestran hasta 100 pendientes. Revisa y actualiza la lista para continuar.
+            </div>
+          }
+          @if (tab() !== 'pagos') {
+            @for (court of local.courts; track court.id) {
+              @if (courtInPlay(court) && court.runtime; as game) {
+                <div class="notice ops-live">
+                  <strong>{{ court.name }} · En juego desde {{ clock(game.actualStartAt) }}</strong
+                  ><span>Fin estimado {{ clock(game.estimatedEndAt) }}</span>
+                  <button class="button button-outline" (click)="selectDate(game.date || today())">
+                    Ver reserva en juego
+                  </button>
+                </div>
+              }
+            }
+            @if (local.reservations.length) {
+              <details class="admin-filter-details">
+                <summary>
+                  <gg-icon name="search" /> Filtrar reservas
+                  @if (courtFilter() || stateFilter()) {
+                    <span>Hay filtros aplicados</span>
+                  }
+                </summary>
+                <div class="ops-filters">
+                  @if (local.courts.length > 1) {
+                    <label
+                      >Cancha<select
+                        [ngModel]="courtFilter()"
+                        (ngModelChange)="courtFilter.set($event)"
+                      >
+                        <option value="">Todas las canchas</option>
+                        @for (c of local.courts; track c.id) {
+                          <option [value]="c.id">{{ c.name }}</option>
+                        }
+                      </select></label
+                    >
+                  }
+                  <label
+                    >Estado de la reserva<select
+                      [ngModel]="stateFilter()"
+                      (ngModelChange)="stateFilter.set($event)"
+                    >
+                      <option value="">Todos los estados</option>
+                      <option value="confirmed">Confirmadas</option>
+                      <option value="pending_payment">Pendientes de pago</option>
+                      <option value="pending_verification">Comprobantes en revisión</option>
+                      <option value="rejected">Rechazadas</option>
+                      <option value="expired">Vencidas</option>
+                      @if (tab() !== 'pagos') {
+                        <option value="running">En juego</option>
+                        <option value="completed">Finalizadas</option>
+                      }
+                    </select></label
+                  >
+                  @if (courtFilter() || stateFilter()) {
+                    <button
+                      class="button button-outline"
+                      (click)="courtFilter.set(''); stateFilter.set('')"
+                    >
+                      Quitar filtros
+                    </button>
+                  }
+                </div>
+              </details>
+            }
+          }
+          <div class="ops-reservations">
+            @for (r of visibleRequests(); track r.id) {
+              <article
+                class="panel ops-reservation"
+                [class.ops-running]="serviceState(r) === 'running'"
+              >
+                <div class="ops-time">
+                  <strong>{{ slot(r.hour) }}</strong
+                  ><span>{{ dateLabel(r.date) }}</span>
+                </div>
+                <div class="ops-reservation-body">
+                  <span class="tag" [class.confirmed]="r.status === 'confirmed'">{{
+                    serviceLabel(r)
+                  }}</span>
+                  <h3>{{ r.courtName }}</h3>
+                  <small>Reserva {{ r.id.slice(-8).toUpperCase() }}</small>
+                  @if (r.estimatedStartAt && serviceState(r) !== 'completed') {
+                    <p class="ops-estimate">
+                      {{ serviceState(r) === 'running' ? 'Inicio real' : 'Horario estimado' }}:
+                      <strong
+                        >{{ clock(r.actualStartAt || r.estimatedStartAt) }} –
+                        {{ clock(r.estimatedEndAt) }}</strong
+                      >
+                    </p>
+                  }
+                  @if (serviceState(r) === 'completed' && r.actualStartAt) {
+                    <p>
+                      Partido finalizado · {{ clock(r.actualStartAt) }} a {{ clock(endOfGame(r)) }}
+                    </p>
+                  }
+                  @if (serviceState(r) === 'running') {
+                    <p>
+                      Termina automáticamente a las <strong>{{ clock(endOfGame(r)) }}</strong
+                      >.
+                    </p>
+                  }
+                  <p>
+                    Comprobante: <strong>{{ paymentLabel(r) }}</strong>
+                  </p>
+                  <p>
+                    Adelanto: <strong>{{ money(r.advanceCents) }}</strong>
+                  </p>
+                  <p class="admin-reservation-total">
+                    Total de la cancha: {{ money(r.totalCents) }}
+                  </p>
+                  @if (r.demo) {
+                    <span class="demo-label">PRUEBA</span>
+                  }
+                </div>
+                <div class="ops-reservation-actions">
+                  @if (r.status === 'pending_verification') {
+                    <button
+                      class="button button-primary"
+                      [disabled]="busy() || stale()"
+                      (click)="openReview(r)"
+                    >
+                      Revisar este comprobante <gg-icon name="arrow" />
+                    </button>
+                  }
+                  @if (r.status === 'confirmed' && !serviceState(r)) {
+                    <button
+                      class="button button-primary"
+                      [disabled]="busy() || stale() || !canStart(r)"
+                      (click)="openSession(r, 'start')"
+                    >
+                      Empezar partido</button
+                    ><small>Se habilita al llegar la hora reservada.</small>
+                  }
+                </div>
+              </article>
+            } @empty {
+              <div class="panel compact-empty admin-empty">
+                <span class="admin-empty-icon"
+                  ><gg-icon [name]="tab() === 'pagos' ? 'check' : 'calendar'"
+                /></span>
+                <h3>
+                  {{
+                    tab() === 'pagos'
+                      ? 'No hay comprobantes pendientes'
+                      : 'No hay reservas para mostrar'
+                  }}
+                </h3>
+                <p>
+                  {{
+                    tab() === 'pagos'
+                      ? 'Cuando un cliente envíe su foto, podrás revisarla aquí.'
+                      : courtFilter() || stateFilter()
+                        ? 'Prueba con otro filtro o quita los filtros aplicados.'
+                        : 'Puedes consultar otra fecha con los botones de arriba.'
+                  }}
+                </p>
+                @if (tab() !== 'pagos' && (courtFilter() || stateFilter())) {
+                  <button
+                    class="button button-outline"
+                    (click)="courtFilter.set(''); stateFilter.set('')"
+                  >
+                    Ver todas las reservas del día
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+      }
+    </section>
+  </div>
+  @if (actionPrompt(); as prompt) {
+    <div class="review-overlay">
+      <section
+        class="review-dialog panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="session-title"
+      >
+        <h2 id="session-title">Registrar inicio real</h2>
+        <p>
+          {{ prompt.reservation.courtName }} · {{ dateLabel(prompt.reservation.date) }} ·
+          {{ slot(prompt.reservation.hour) }}
+        </p>
+        <div class="notice">
+          Se registrará la hora actual. El partido terminará automáticamente al cumplirse 60 minutos
+          desde su inicio real. Los siguientes turnos mostrarán su horario estimado actualizado.
+        </div>
+        @if (sessionError()) {
+          <p class="notice notice-error" role="alert">{{ sessionError() }}</p>
+        }
+        <div class="managed-actions">
+          <button
+            id="session-cancel"
+            class="button button-outline"
+            [disabled]="busy()"
+            (click)="closeSession()"
+          >
+            Volver</button
+          ><button class="button button-primary" [disabled]="busy()" (click)="sessionAction()">
+            {{ busy() ? 'Registrando…' : 'Confirmar inicio ahora' }}
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+  @if (review(); as reservation) {
+    <div class="review-overlay" (keydown.escape)="!busy() && closeReview()">
+      <section
+        class="review-dialog panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="review-title"
+      >
+        <div class="review-title">
+          <div>
+            <span class="eyebrow">REVISA ANTES DE CONFIRMAR</span>
+            <h2 id="review-title">Comprobante del cliente</h2>
+          </div>
+          <button
+            id="admin-review-close"
+            class="button button-outline"
+            [disabled]="busy()"
+            (click)="closeReview()"
+          >
+            Cerrar
+          </button>
+        </div>
+        <p class="admin-review-reservation">
+          <strong>{{ reservation.courtName }}</strong
+          ><br />{{ dateLabel(reservation.date) }} · {{ slot(reservation.hour) }}
+        </p>
+        @if (reviewError()) {
+          <div class="notice notice-error admin-feedback" role="alert">
+            <p>{{ reviewError() }}</p>
+            @if (!proofUrl()) {
+              <button
+                class="button button-outline"
+                [disabled]="busy() || proofLoading()"
+                (click)="proofReload()"
+              >
+                Volver a cargar la foto
+              </button>
+            }
+          </div>
+        }
+        @if (rejecting()) {
+          <div class="admin-reject-confirm">
+            <h3>¿Rechazar esta solicitud?</h3>
+            <p>La solicitud se rechazará y su horario volverá a estar disponible.</p>
+            <div class="managed-actions">
+              <button
+                class="button button-outline"
+                [disabled]="busy()"
+                (click)="rejecting.set(false)"
+              >
+                Volver a revisar</button
+              ><button
+                class="button admin-danger-button"
+                [disabled]="busy()"
+                (click)="rejectPayment()"
+              >
+                {{ busy() ? 'Rechazando…' : 'Sí, rechazar solicitud' }}
+              </button>
+            </div>
+          </div>
+        } @else {
+          <section class="admin-review-step" aria-labelledby="proof-step-title">
+            <h3 id="proof-step-title"><span>1</span> Mira la foto del comprobante</h3>
+            @if (proofLoading()) {
+              <p class="loading-state" role="status">Cargando la foto del cliente…</p>
+            }
+            @if (proofUrl()) {
+              <img
+                class="review-proof"
+                [src]="proofUrl()"
+                alt="Comprobante de pago enviado por el cliente"
+              />
+              <a class="button button-outline" [href]="proofUrl()" target="_blank" rel="noopener"
+                >Ampliar foto <gg-icon name="eye"
+              /></a>
+            }
+          </section>
+          <section class="admin-review-step" aria-labelledby="payment-step-title">
+            <h3 id="payment-step-title"><span>2</span> Comprueba que recibiste el dinero</h3>
+            <p>
+              Revisa el ingreso de <strong>{{ money(reservation.advanceCents) }}</strong> en la
+              cuenta del establecimiento. La foto por sí sola no verifica el pago.
+            </p>
+            <label class="verification-checkbox"
+              ><input
+                type="checkbox"
+                [(ngModel)]="verified"
+                [disabled]="busy() || proofLoading() || !proofUrl()"
+              /><span
+                >Sí, confirmé que llegaron <strong>{{ money(reservation.advanceCents) }}</strong> a
+                la cuenta del local.</span
+              ></label
+            >
+          </section>
+          <section class="admin-review-step admin-review-last" aria-labelledby="confirm-step-title">
+            <h3 id="confirm-step-title"><span>3</span> Confirma la reserva</h3>
+            <button
+              class="button button-primary button-full"
+              [disabled]="!verified || busy() || proofLoading() || !proofUrl()"
+              (click)="confirmPayment()"
+            >
+              {{ busy() ? 'Confirmando…' : 'Sí, validar pago y confirmar reserva'
+              }}<gg-icon name="check" />
+            </button>
+            <button
+              class="button button-outline button-full admin-reject-button"
+              [disabled]="busy() || proofLoading()"
+              (click)="rejecting.set(true)"
+            >
+              No validado · rechazar solicitud
+            </button>
+          </section>
+        }
+      </section>
+    </div>
+  }
+</div>

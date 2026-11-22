@@ -1,0 +1,275 @@
+:host {
+  display: block;
+}
+.kiosk {
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.6;
+}
+.kiosk-heading {
+  margin: 24px 0;
+}
+.kiosk h2 {
+  font-size: clamp(27px, 3vw, 36px);
+  margin: 10px 0;
+}
+.kiosk h3 {
+  font-size: 24px;
+  line-height: 1.3;
+  margin: 0 0 14px;
+}
+.kiosk p {
+  margin: 12px 0;
+}
+.kiosk-tabs,
+.kiosk-actions,
+.kiosk-line {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.kiosk-tabs {
+  margin: 24px 0;
+}
+.kiosk .button {
+  min-height: 56px;
+  padding: 14px 20px;
+  font-size: 17px;
+  border-radius: 14px;
+  white-space: normal;
+}
+.kiosk-tabs .button {
+  flex: 1;
+}
+.kiosk-line {
+  justify-content: space-between;
+  margin: 24px 0;
+}
+.kiosk .panel {
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--paper);
+}
+.kiosk-form {
+  margin: 24px 0;
+}
+.kiosk fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.kiosk label {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 700;
+}
+.kiosk input,
+.kiosk select {
+  width: 100%;
+  min-height: 56px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+.kiosk input::placeholder {
+  color: var(--ink);
+  opacity: 0.65;
+}
+.kiosk small,
+.kiosk-help {
+  font-size: 15px;
+  color: var(--ink);
+  font-weight: 400;
+  line-height: 1.6;
+}
+.kiosk-fields,
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 20px;
+}
+.kiosk .check-line {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  font-weight: 600;
+}
+.kiosk .check-line input {
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  flex-shrink: 0;
+  accent-color: var(--green);
+}
+.payment-confirm {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.kiosk-actions {
+  margin-top: 22px;
+}
+.quantity-controls {
+  display: grid;
+  grid-template-columns: 64px minmax(80px, 180px) 64px;
+  gap: 12px;
+  align-items: center;
+}
+.quantity-controls input {
+  text-align: center;
+  font-size: 24px;
+}
+.quantity-controls .button {
+  font-size: 28px;
+  padding: 8px;
+}
+.sale-summary {
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin: 22px 0;
+}
+.sale-summary span {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.sale-summary strong {
+  font-size: 23px;
+}
+.product-card {
+  text-align: left;
+  display: grid;
+  gap: 14px;
+  min-height: 230px;
+  padding: 26px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.product-card > strong {
+  font-size: 24px;
+  overflow-wrap: anywhere;
+}
+.product-card:not(:disabled):hover {
+  border-color: var(--green);
+}
+.product-card:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+}
+.product-category {
+  font-size: 14px;
+  font-weight: 700;
+}
+.product-price {
+  font-size: 28px;
+  font-weight: 750;
+}
+.stock-label {
+  font-size: 17px;
+}
+.no-stock {
+  font-weight: 700;
+  color: #9a3b19;
+}
+.card-action {
+  font-size: 17px;
+  font-weight: 700;
+}
+.kiosk-empty {
+  text-align: center;
+  margin: 24px 0;
+}
+.kiosk-empty > gg-icon {
+  font-size: 30px;
+  margin: 8px auto 18px;
+}
+.kiosk-search {
+  margin: 24px 0;
+}
+.stock-card h3 {
+  overflow-wrap: anywhere;
+}
+.product-photo {
+  display: block;
+  width: 100%;
+  height: 140px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: var(--paper);
+}
+.photo-editor {
+  margin: 24px 0;
+}
+.photo-editor .product-photo {
+  max-width: 240px;
+  height: 180px;
+  margin: 16px 0;
+}
+.selected-photo {
+  width: 100px;
+  height: 100px;
+  margin: 16px 0;
+}
+.movement {
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+}
+.movement > div {
+  display: grid;
+  gap: 8px;
+}
+.movement > div > span {
+  font-size: 14px;
+}
+.kiosk .notice {
+  font-size: 17px;
+  padding: 20px;
+  margin: 20px 0;
+  overflow-wrap: anywhere;
+}
+.kiosk :is(button, input, select):focus-visible {
+  outline: 3px solid #029fbd;
+  outline-offset: 3px;
+}
+@media (max-width: 650px) {
+  .kiosk-tabs {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .kiosk .panel {
+    padding: 20px;
+  }
+  .kiosk-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+  .kiosk-actions .button {
+    width: 100%;
+  }
+  .quantity-controls {
+    grid-template-columns: 56px minmax(80px, 1fr) 56px;
+  }
+  .kiosk-line {
+    align-items: stretch;
+  }
+  .kiosk-line > .button {
+    width: 100%;
+  }
+}
